@@ -34,6 +34,6 @@ public class EventEdge extends Edge {
 	
 	@Override
 	public String toString() {
-		return super.toString()+" Priority:"+(new Integer(totalPriority).toString());
+		return "[" + super.toString()+" Priority:"+(new Integer(totalPriority).toString()) + "]";
 	}
 }

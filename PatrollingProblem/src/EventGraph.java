@@ -3,16 +3,16 @@ import java.util.Set;
 
 
 public class EventGraph {
-	private Set<Vertex> vertices;
-	private Set<EventEdge> edges;
-	private Vertex[][] vertexArray;
-	
-	public EventGraph() {
-		super();
-	}
+	public Set<Vertex> vertices;
+	public Set<EventEdge> edges;
+	public Vertex[][] vertexArray;
+	public int width;
+	public int height;
 	
 	public EventGraph(int width, int height) {
-		this();
+		super();
+		this.width = width;
+		this.height = height;
 		vertices = new HashSet<Vertex>(width * height);
 		edges = new HashSet<EventEdge>();
 		vertexArray = new Vertex[width][height];
@@ -33,21 +33,22 @@ public class EventGraph {
 		for (int i=0; i < width; i++) {
 			for (int j=0; j < height; j++) {
 				Vertex thisVertex = vertexArray[i][j];
-				// Up,down,left,right edges
-				for (int horizontal=(i-1); horizontal < (i+2); horizontal++) {
-					for (int vertical=(j-1); vertical < (j+2); vertical++) {
-						
-						if (horizontal > -1 && horizontal < width &&
-							vertical > -1 && vertical < height) {
-							Vertex adjacentVertex = vertexArray[horizontal][vertical];
-							if (!adjacentVertex.equals(thisVertex)) {
-								String edgeName = new Integer(edgeCount).toString();
-								EventEdge edge = new EventEdge(edgeName, thisVertex, adjacentVertex);
-								this.addEdge(edge);
-								edgeCount++;
-							}
-						}
-					}
+				
+				// Horizontal edges
+				if (i != (width - 1)) {
+					Vertex adjacentVertex = vertexArray[i+1][j];
+					String edgeName = new Integer(edgeCount).toString();
+					EventEdge edge = new EventEdge(edgeName, thisVertex, adjacentVertex);
+					this.addEdge(edge);
+					edgeCount++;
+				}
+				// Vertical edges
+				if (j != (height - 1)) {
+					Vertex adjacentVertex = vertexArray[i][j+1];
+					String edgeName = new Integer(edgeCount).toString();
+					EventEdge edge = new EventEdge(edgeName, thisVertex, adjacentVertex);
+					this.addEdge(edge);
+					edgeCount++;
 				}
 			}
 		}
@@ -80,6 +81,17 @@ public class EventGraph {
 			}
 		}
 		return false;
+	}
+	
+	public Set<EventEdge> getAdjacentEdges(Vertex vertex) {
+		Set<EventEdge> adjacentEdges = new HashSet<EventEdge>();
+		for (EventEdge edge : edges) {
+			if (edge.getVertices().contains(vertex)) {
+				adjacentEdges.add(edge);
+			}
+		}
+		
+		return adjacentEdges;
 	}
 	
 	@Override

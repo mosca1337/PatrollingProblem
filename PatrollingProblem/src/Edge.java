@@ -14,6 +14,15 @@ public class Edge {
 		this.vertex2 = vertex2;
 	}
 	
+	public Vertex getOtherVertex(Vertex vertex) {
+		if (vertex == vertex1) {
+			return vertex2;
+		} else if (vertex == vertex2) {
+			return vertex1;
+		}
+		return null;
+	}
+	
 	public Set<Vertex> getVertices() {
 		if (vertices == null) {
 			HashSet<Vertex> vertices = new HashSet<Vertex>(2);
