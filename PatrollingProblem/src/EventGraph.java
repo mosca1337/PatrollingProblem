@@ -22,6 +22,8 @@ public class EventGraph {
 		for (int i=0; i < width; i++) {
 			for (int j=0; j < height; j++) {
 				Vertex vertex = new Vertex(new Integer(vertexCount).toString());
+				vertex.x = i;
+				vertex.y = j;
 				this.addVertex(vertex);
 				vertexArray[i][j] = vertex;
 				vertexCount++;

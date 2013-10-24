@@ -1,0 +1,3 @@
+[submodule "VariableTimer"]
+	path = VariableTimer
+	url = https://github.com/mosca1337/VariableTimer.git

@@ -4,8 +4,8 @@ import java.util.HashSet;
 
 public class Edge {
 	public String name;
-	private Vertex vertex1;
-	private Vertex vertex2;
+	public Vertex vertex1;
+	public Vertex vertex2;
 	private Set<Vertex> vertices = null;
 	
 	public Edge(String name, Vertex vertex1, Vertex vertex2) {
@@ -35,6 +35,6 @@ public class Edge {
 	
 	@Override
 	public String toString() {
-		return "Edge("+vertex1.toString()+","+vertex2.toString()+")";
+		return name + " Edge("+vertex1.toString()+","+vertex2.toString()+")";
 	}
 }
