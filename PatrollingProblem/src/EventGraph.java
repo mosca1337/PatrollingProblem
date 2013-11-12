@@ -6,6 +6,8 @@ public class EventGraph {
 	public Set<Vertex> vertices;
 	public Set<EventEdge> edges;
 	public Vertex[][] vertexArray;
+	public EventEdge[][] verticalEdges;
+	public EventEdge[][] horizontalEdges;
 	public int width;
 	public int height;
 	
@@ -16,6 +18,8 @@ public class EventGraph {
 		vertices = new HashSet<Vertex>(width * height);
 		edges = new HashSet<EventEdge>();
 		vertexArray = new Vertex[width][height];
+		verticalEdges = new EventEdge[width][height-1];
+		horizontalEdges = new EventEdge[width-1][height];
 		
 		// Create a grid of vertices
 		int vertexCount = 0;
@@ -41,6 +45,7 @@ public class EventGraph {
 					Vertex adjacentVertex = vertexArray[i+1][j];
 					String edgeName = new Integer(edgeCount).toString();
 					EventEdge edge = new EventEdge(edgeName, thisVertex, adjacentVertex);
+					horizontalEdges[i][j] = edge;
 					this.addEdge(edge);
 					edgeCount++;
 				}
@@ -49,6 +54,7 @@ public class EventGraph {
 					Vertex adjacentVertex = vertexArray[i][j+1];
 					String edgeName = new Integer(edgeCount).toString();
 					EventEdge edge = new EventEdge(edgeName, thisVertex, adjacentVertex);
+					verticalEdges[i][j] = edge;
 					this.addEdge(edge);
 					edgeCount++;
 				}
@@ -94,6 +100,24 @@ public class EventGraph {
 		}
 		
 		return adjacentEdges;
+	}
+	
+	public Set<EventEdge> getEdges(int fromX, int fromY, int toX, int toY) {
+		
+		Set<EventEdge> edges = new HashSet<EventEdge>();
+		// Horizontal
+		for (int i = fromX; i < toX; i++) {
+			for (int j = fromY; j <= toY; j++) {
+				edges.add(horizontalEdges[i][j]);
+			}
+		}
+		// Vertical
+		for (int i = fromX; i <= toX; i++) {
+			for (int j = fromY; j < toY; j++) {
+				edges.add(verticalEdges[i][j]);
+			}
+		}
+		return edges;
 	}
 	
 	@Override

@@ -1,3 +1,4 @@
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -17,15 +18,27 @@ public class EventEdge extends Edge {
 		totalPriority += event.priority;
 	}
 	
+	public Set<Event> collectEvents() {
+		
+		// Set time collected for each event
+		Date currentTime = new Date();
+		for (Event event : events) {
+			event.timeCollected = currentTime;
+		}
+		
+		Set<Event> collectedEvents = new HashSet<Event>(events);
+		clearEvents();
+
+		return collectedEvents;
+	}
+	
 	public Set<Event> getEvents() {
 		return events;
 	}
 	
-	public int clearEvents() {
-		int priority = totalPriority;
+	public void clearEvents() {
 		totalPriority = 0;
 		events = new HashSet<Event>();
-		return priority;
 	}
 	
 	public int getPriority() {
@@ -34,6 +47,6 @@ public class EventEdge extends Edge {
 	
 	@Override
 	public String toString() {
-		return "[Priority:"+(new Integer(totalPriority).toString()) + "]";
+		return "[Edge:"+(new Integer(totalPriority).toString()) + "]";
 	}
 }
