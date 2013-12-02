@@ -5,7 +5,6 @@ import java.util.Set;
 
 public class EventEdge extends Edge {
 	private Set<Event> events;
-	private int totalPriority = 0;
 
 	public EventEdge(String name, Vertex vertex1, Vertex vertex2) {
 		super(name, vertex1, vertex2);
@@ -15,7 +14,6 @@ public class EventEdge extends Edge {
 	
 	public void addEvent(Event event) {
 		events.add(event);
-		totalPriority += event.priority;
 	}
 	
 	public Set<Event> collectEvents() {
@@ -37,16 +35,33 @@ public class EventEdge extends Edge {
 	}
 	
 	public void clearEvents() {
-		totalPriority = 0;
 		events = new HashSet<Event>();
 	}
 	
 	public int getPriority() {
+		int totalPriority = 0;
+		for (Event event : events) {
+			totalPriority += event.getPriority();
+		}
 		return totalPriority;
+	}
+	
+	public Set<Event> removeDeadEvents() {
+		Set<Event> deadEvents = new HashSet<Event>();
+		Set<Event> liveEvents = new HashSet<Event>();
+		for (Event event : events) {
+			if (event.getPriority() <= 0) {
+				deadEvents.add(event);
+			} else {
+				liveEvents.add(event);
+			}
+		}
+		events = liveEvents;
+		return deadEvents;
 	}
 	
 	@Override
 	public String toString() {
-		return "[Edge:"+(new Integer(totalPriority).toString()) + "]";
+		return "[Edge:"+(new Integer(getPriority()).toString()) + "]";
 	}
 }

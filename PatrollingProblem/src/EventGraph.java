@@ -120,6 +120,14 @@ public class EventGraph {
 		return edges;
 	}
 	
+	public Set<Event> removeDeadEvents() {
+		Set<Event> deadEvents = new HashSet<Event>();
+		for (EventEdge edge : edges) {
+			deadEvents.addAll(edge.removeDeadEvents());
+		}
+		return deadEvents;
+	}
+	
 	@Override
 	public String toString() {
 		String string = "Vertices:\n";

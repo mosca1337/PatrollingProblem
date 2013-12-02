@@ -14,19 +14,27 @@ public class EventWriter {
 	public EventWriter(File fileName) throws IOException {
 		FileWriter fileWriter = new FileWriter(fileName);
 		writer = new CSVWriter(new BufferedWriter(fileWriter), ',', CSVWriter.NO_QUOTE_CHARACTER);
+		
+		// Writer header
+		// TODO: 'NumberOfAgents', 'eventChange(constant decreasing)' ' Mean' , 'totalCollected', 'delay', 'averageDelay', 'serviceTime (f/10)', deadEvents 
+		String[] line = new String[]{"meanCollected", "totalEventsCollected", "totalDelay"};
+		writer.writeNext(line);
+		writer.flushQuietly();
 	}
 	
-	public void writeEvents(Agent agent, Set<Event> events) {
+	public void writeSimulation(Simulation simulation) {
 		
-		for (Event event : events) {
-			String timeCollected = new Long(event.timeCollected.getTime()).toString();
-			String eventPriority = new Integer(event.priority).toString();
-			String totalCollected = new Integer(agent.totalCollected).toString();
-			
-			String[] line = new String[]{timeCollected, agent.name, eventPriority, totalCollected};
-			writer.writeNext(line);	
+		long meanCollected = 0;
+		long totalEventsCollected = 0;
+		long totalDelay = 0;
+		for (Agent agent : simulation.agents) {
+			meanCollected += agent.totalPriorityCollected;
+			totalEventsCollected += agent.liveEventsCollected;
+			totalDelay += agent.totalDelay;
 		}
 		
+		String[] line = new String[]{String.valueOf(meanCollected), String.valueOf(totalEventsCollected), String.valueOf(totalDelay)};
+		writer.writeNext(line);
 		writer.flushQuietly();
 	}
 	

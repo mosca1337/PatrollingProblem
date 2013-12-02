@@ -10,10 +10,14 @@ public class Agent {
 	public Vertex lastLocation;
 	public Set<EventEdge> boundary;
 	public EventEdge lastEdge = null;
-	public int totalCollected;
+	
+	public int totalPriorityCollected;
+	public long totalDelay;
+	public int deadEventsCollected;
+	public int liveEventsCollected;
 	
 	// Animation properties
-	public int nodeCount = 0;
+	public int nodeCount;
 	public boolean isMoving;
 	public Vertex movingToLocation;
 	public long startTime;
@@ -26,33 +30,47 @@ public class Agent {
 		this.lastLocation = location;
 		this.movingToLocation = location;
 		this.boundary = boundary;
-		this.totalCollected = 0;
 		this.isMoving = false;
 
 		updateTimes();
 	}
 	
-	public Set<Event> move() {
+	public double getAverageDelay() {
+		if (liveEventsCollected == 0) {
+			return 0;
+		}
+		return (double)totalDelay / (double)liveEventsCollected;
+	}
+	
+	public void move() {
 		
 		// Do not collect events on the first move
-		Set<Event> collectedEvents = new HashSet<Event>();
 		if (lastEdge != null) {
 			
-			// Collect the total priority from the chosen edge
-			totalCollected += lastEdge.getPriority();
-
 			// Get all the events on the last edge
-			collectedEvents = lastEdge.collectEvents();
+			Set<Event> collectedEvents = lastEdge.collectEvents();
+			for (Event event : collectedEvents) {
+				
+				// Collect the total priority and delay from each edge
+				totalPriorityCollected += event.getPriority();
+				long delay = event.timeCollected.getTime() - event.timeGenerated.getTime();
+				totalDelay += delay;
+				
+				// Count live and dead events
+				if (event.getPriority() <= 0) {
+					deadEventsCollected++;
+				} else {
+					liveEventsCollected++;
+				}
+			}
 			
 			// Update locations
 			lastLocation = movingToLocation;
 		}
 
+		// Find next movement choices within the agent's boundary
 		Set<EventEdge> adjacentEdges = graph.getAdjacentEdges(lastLocation);
-		
-		// Stay within the boundary
 		adjacentEdges.retainAll(boundary);
-		System.out.println(name + " has choices " + adjacentEdges);
 		
 		// Looks for edge with highest priority
 		int highestPriority = -1;
@@ -64,15 +82,12 @@ public class Agent {
 			}
 		}
 
+		// Choose next location
 		Vertex nextLocation = lastEdge.getOtherVertex(lastLocation);
 		movingToLocation = nextLocation;
 		updateTimes();
 		
-		System.out.println(name + " now has " + totalCollected);
-
 		nodeCount++;
-		
-		return collectedEvents;
 	}
 	
 	private void updateTimes() {
