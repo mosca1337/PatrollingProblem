@@ -1,21 +1,12 @@
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-
-import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JPanel;
 
 public class SimulationFrame extends JFrame {
-	private Simulation simulation;
 	
     public SimulationFrame(Simulation simulation){
-    	this.simulation = simulation;
     	
     	GraphPanel graphPanel = new GraphPanel(simulation);
+    	setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     	
     	// Settings panel
 //    	Dimension settingsPanelDimension = new Dimension(200, graphPanel.height);
@@ -46,8 +37,4 @@ public class SimulationFrame extends JFrame {
     	add(graphPanel);
         setVisible(true);
    }
-    
-    public void pauseSimulation() {
-    	
-    }
 }

@@ -1,26 +1,22 @@
-import java.io.File;
-import java.io.IOException;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
-import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.CountDownLatch;
 
 
 public class Simulation {
 	public final static int minPriority = 1;
 	public final static int maxPriority = 10;
 	
-	private EventWriter eventWriter = null;
-	
 	public Function eventValueFunction;
-	public Function agentPeriod;
+	public int agentConstant;
 	public Function eventPeriod;
 	
 	public SimulationFrame graphFrame;
 	public EventGraph graph;
 	public Set<Agent> agents;
+	public int totalAgents;
 	
 	public int eventsGenerated = 0;
 	private int deadEventCount = 0;
@@ -28,42 +24,19 @@ public class Simulation {
 	
 	// Timers
 	private VariableTimer randomEventTimer;
-	private Set<VariableTimer> agentTimers;
 	
-	// TODO: number of dead events total
+	// Blocking
+	CountDownLatch latch;
 
 	public static void main(String[] args) {
-		
-		// Simulation file
-		String userHomeFolder = System.getProperty("user.home");
-		File file = new File(userHomeFolder, "Desktop/simulationData.csv");
 
-		// Setup the EventWriter
-		EventWriter eventWriter = null;
-		if (file != null) {
-			try {
-				eventWriter = new EventWriter(file);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-
-		// Agent period
-		Function agentPeriod = new Function() {
-			public long function(long x) {
-				// TODO: priority value /= 10,20, and 50
-	    		return 1000;
-	    	}
-		};
-		
 		// Event generation period
 		Function eventPeriod = new Function() {
 			public long function(long x) {
-	    		return 500;
+//	    		return 500;
 				
 				// TODO: exponential distribution in MM1
-//	    		return 2000/(x+1) + 100;
+	    		return 2000/(x+1) + 100;
 	    	}
 		};
 
@@ -74,20 +47,26 @@ public class Simulation {
 	    	}
 		};
 
-		new Simulation(eventWriter, eventValue, agentPeriod, 2, eventPeriod, 500);
-//		new Simulation(eventWriter, null, agentPeriod, 2, eventPeriod, 500);
+		Simulation simulation = new Simulation(eventValue, 10, 2, eventPeriod, 500);
+//		Simulation simulation = new Simulation(null, agentPeriod, 2, eventPeriod, 500);
+		simulation.simulate();
 	}
 	
-	public Simulation(EventWriter eventWriter, Function eventValue, Function agentPeriod, int totalAgents, Function eventPeriod, int maxEventsGenerated) {
+	public Simulation(Function eventValue,int agentConstant, int totalAgents, Function eventPeriod, int maxEventsGenerated) {
 		super();
-		this.eventWriter = eventWriter;
 		this.eventValueFunction = eventValue;
-		this.agentPeriod = agentPeriod;
+		this.agentConstant = agentConstant;
+		this.totalAgents = totalAgents;
 		this.eventPeriod = eventPeriod;
 		this.maxEventsGenerated = maxEventsGenerated;
 		
+		this.latch = new CountDownLatch(1);
+	}
+	
+	public void simulate() {
+		
 		graph = new EventGraph(5,5);
-		System.out.println(graph);
+//		System.out.println(graph);
 
 		graphFrame = new SimulationFrame(this);
 		
@@ -96,51 +75,58 @@ public class Simulation {
 		// Add an event every x seconds
 		randomEventTimer = new VariableTimer();
 		randomEventTimer.scheduleAtVariableRate(new RandomEventTask(graph), eventPeriod);
+		
+
+		// block this function until the simulation is over
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public void closeFrame() {
+		if (graphFrame != null) {
+			graphFrame.setVisible(false);
+		}
 	}
 	
 	private void setupAgents(int totalAgents) {
 		
 		agents = new HashSet<Agent>();
-		agentTimers = new HashSet<VariableTimer>();
 
 		// TODO: currently only handles 1 or 2 agents
 		if (totalAgents == 1) {
 			// Create an agent in the top left of the graph
 			Vertex topLeftVertex = graph.vertexArray[0][0];
-			Agent agent = new Agent("A", graph, agentPeriod, topLeftVertex, graph.edges);
+			Agent agent = new Agent("A", graph, agentConstant, topLeftVertex, graph.edges);
 			agents.add(agent);
-
-			// Move the agent every x seconds
-			VariableTimer agentMovementTimer = new VariableTimer();
-			agentTimers.add(agentMovementTimer);
-			agent.move();
-			agentMovementTimer.scheduleAtVariableRate(new AgentMoveTask(agent), agentPeriod);
+			agent.start();
 		} else if (totalAgents == 2) {
 			Set<EventEdge> topHalf = graph.getEdges(0,0,2,4);
 			Set<EventEdge> bottomHalf = graph.getEdges(2,0,4,4);
 			
 			// Create an agent in the top left of the graph
 			Vertex topLeftVertex = graph.vertexArray[0][0];
-			Agent agentA = new Agent("A", graph, agentPeriod, topLeftVertex, topHalf);
+			Agent agentA = new Agent("A", graph, agentConstant, topLeftVertex, topHalf);
 			agents.add(agentA);
+			agentA.start();
 
 			// Create an agent in the bottom right of the graph
 			Vertex bottomRightVertex = graph.vertexArray[4][4];
-			Agent agentB = new Agent("B", graph, agentPeriod, bottomRightVertex, bottomHalf);
+			Agent agentB = new Agent("B", graph, agentConstant, bottomRightVertex, bottomHalf);
 			agents.add(agentB);
-
-			// Move the agent every x seconds
-			VariableTimer agentMovementTimerA = new VariableTimer();
-			agentTimers.add(agentMovementTimerA);
-			agentA.move();
-			agentMovementTimerA.scheduleAtVariableRate(new AgentMoveTask(agentA), agentPeriod);
-			
-			// Move the agent every x seconds
-			VariableTimer agentMovementTimerB = new VariableTimer();
-			agentTimers.add(agentMovementTimerB);
-			agentB.move();
-			agentMovementTimerB.scheduleAtVariableRate(new AgentMoveTask(agentB), agentPeriod);
+			agentB.start();
 		}
+	}
+	
+	public int getTotalPriorityCollected() {
+		int total = 0;
+		for (Agent agent : agents) {
+			total += agent.totalPriorityCollected;
+		}
+		return total;
 	}
 	
 	public double getAverageDelay() {
@@ -150,6 +136,14 @@ public class Simulation {
 		}
 		average /= agents.size();
 		return average;
+	}
+	
+	public double getDelay() {
+		double delay = 0;
+		for (Agent agent : agents) {
+			delay += agent.totalDelay;
+		}
+		return delay;
 	}
 	
 	public int getDeadEventCount() {
@@ -169,26 +163,8 @@ public class Simulation {
 		for (EventEdge edge : graph.edges) {
 			Set<Event> deadEvents = edge.removeDeadEvents();
 			deadEventCount += deadEvents.size();
-//			for (Event deadEvent : deadEvents) {
-//				deadEventCount++;
-//				totalDelay += deadEvent.getLifeSpan();
-//			}
 		}
 	}
-	
-    class AgentMoveTask extends TimerTask {
-    	private Agent agent;
-    	
-    	public AgentMoveTask(Agent agent) {
-    		this.agent = agent;
-    	}
-    	
-        @Override
-        public void run() {
-        	// Move the agent
-        	agent.move();
-        }
-    }
 	
     class RandomEventTask extends TimerTask {
     	private EventGraph graph;
@@ -217,29 +193,19 @@ public class Simulation {
         }
     }
     
-    public void endSimulation() {
+    private void endSimulation() {
     	
     	// Cancel timers
     	randomEventTimer.cancel();
-    	for (VariableTimer agentTimer : agentTimers) {
-    		agentTimer.cancel();
+    	for (Agent agent : agents) {
+    		agent.stop();
     	}
-
+    	
     	// Collect remaining dead events
     	removeDeadEvents();
     	accumulateAgents();
-    	
-    	// Write the data
-    	if (eventWriter != null) {
-    		eventWriter.writeSimulation(this);
-    		
-        	// Close the file
-    		try {
-				eventWriter.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-    	}
+        
+        // Finish simulation
+        latch.countDown();
     }
 }

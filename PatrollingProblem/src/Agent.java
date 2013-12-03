@@ -1,15 +1,18 @@
-import java.util.Date;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 
 public class Agent {
+	public final static int idleTime = 100;
+	
 	public EventGraph graph;
 	public String name;
-	public Function speed;
 	public Vertex lastLocation;
 	public Set<EventEdge> boundary;
-	public EventEdge lastEdge = null;
+	public EventEdge currentEdge = null;
+	private Timer timer;
+	private int speedConstant;
 	
 	public int totalPriorityCollected;
 	public long totalDelay;
@@ -17,24 +20,34 @@ public class Agent {
 	public int liveEventsCollected;
 	
 	// Animation properties
-	public int nodeCount;
-	public boolean isMoving;
 	public Vertex movingToLocation;
 	public long startTime;
 	public long endTime;
 	
-	public Agent(String name, EventGraph graph, Function speed, Vertex location, Set<EventEdge> boundary) {
+	public Agent(String name, EventGraph graph, int speedConstant, Vertex location, Set<EventEdge> boundary) {
 		this.name = name;
-		this.speed = speed;
+		this.speedConstant = speedConstant;
 		this.graph = graph;
 		this.lastLocation = location;
 		this.movingToLocation = location;
 		this.boundary = boundary;
-		this.isMoving = false;
-
-		updateTimes();
+		this.timer = new Timer();
 	}
 	
+    class AgentMoveTask extends TimerTask {
+    	private Agent agent;
+    	
+    	public AgentMoveTask(Agent agent) {
+    		this.agent = agent;
+    	}
+    	
+        @Override
+        public void run() {
+        	// Move the agent
+        	agent.move();
+        }
+    }
+
 	public double getAverageDelay() {
 		if (liveEventsCollected == 0) {
 			return 0;
@@ -42,31 +55,9 @@ public class Agent {
 		return (double)totalDelay / (double)liveEventsCollected;
 	}
 	
-	public void move() {
+	private void move() {
 		
-		// Do not collect events on the first move
-		if (lastEdge != null) {
-			
-			// Get all the events on the last edge
-			Set<Event> collectedEvents = lastEdge.collectEvents();
-			for (Event event : collectedEvents) {
-				
-				// Collect the total priority and delay from each edge
-				totalPriorityCollected += event.getPriority();
-				long delay = event.timeCollected.getTime() - event.timeGenerated.getTime();
-				totalDelay += delay;
-				
-				// Count live and dead events
-				if (event.getPriority() <= 0) {
-					deadEventsCollected++;
-				} else {
-					liveEventsCollected++;
-				}
-			}
-			
-			// Update locations
-			lastLocation = movingToLocation;
-		}
+		lastLocation = movingToLocation;
 
 		// Find next movement choices within the agent's boundary
 		Set<EventEdge> adjacentEdges = graph.getAdjacentEdges(lastLocation);
@@ -78,23 +69,49 @@ public class Agent {
 			int edgePriority = edge.getPriority();
 			if (edgePriority > highestPriority) {
 				highestPriority = edgePriority;
-				lastEdge = edge;
+				currentEdge = edge;
 			}
 		}
 
 		// Choose next location
-		Vertex nextLocation = lastEdge.getOtherVertex(lastLocation);
+		Vertex nextLocation = currentEdge.getOtherVertex(lastLocation);
 		movingToLocation = nextLocation;
-		updateTimes();
+
+		int edgePriority = 0;
+		Set<Event> collectedEvents = currentEdge.collectEvents();
+		for (Event event : collectedEvents) {
+			
+			// Collect the total priority and delay from each edge
+			totalPriorityCollected += event.getPriority();
+			edgePriority += event.getPriority();
+			long delay = event.timeCollected.getTime() - event.timeGenerated.getTime();
+			totalDelay += delay;
+			
+			// Count live and dead events
+			if (event.getPriority() <= 0) {
+				deadEventsCollected++;
+			} else {
+				liveEventsCollected++;
+			}
+		}
 		
-		nodeCount++;
+		startTime = endTime;
+		int traversalTime = (edgePriority * 1000) / speedConstant;
+		traversalTime = Math.max(idleTime, traversalTime);
+		endTime = startTime + traversalTime;
+		
+		// Schedule next movement
+		timer.schedule(new AgentMoveTask(this), traversalTime);
 	}
 	
-	private void updateTimes() {
-		
+	public void start() {
 		startTime = System.currentTimeMillis();
-		long movementTime = speed.function(nodeCount);
-		endTime = startTime + movementTime;
+		endTime = startTime;
+		move();
+	}
+	
+	public void stop() {
+		timer.cancel();
 	}
 
 	@Override

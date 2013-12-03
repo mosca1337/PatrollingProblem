@@ -17,6 +17,7 @@ public class Event {
 		this.priority = priority;
 		this.function = lifeSpanFunction;
 		
+		// Decreasing priority
 		if (function != null) {
 			lifeSpan = function.function(1) * priority;
 			timeOfDeath = new Date(lifeSpan + timeGenerated.getTime());
@@ -24,6 +25,7 @@ public class Event {
 	}
 	
 	public int getPriority() {
+		// Decreasing priority
 		if (function != null) {
 			long currentTime = new Date().getTime() - timeGenerated.getTime();
 			double percentOfPriority = (double)currentTime / (double)lifeSpan;
@@ -32,6 +34,8 @@ public class Event {
 			percentOfPriority = 1 - percentOfPriority;
 			return (int)Math.ceil(priority * percentOfPriority);
 		}
+		
+		// Constant priority
 		return priority;
 	}
 	
