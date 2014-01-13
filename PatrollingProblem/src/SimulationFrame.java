@@ -3,7 +3,9 @@ import javax.swing.JFrame;
 
 public class SimulationFrame extends JFrame {
 	
-    public SimulationFrame(Simulation simulation){
+	private static final long serialVersionUID = 3165219692889738477L;
+
+	public SimulationFrame(Simulation simulation){
     	
     	GraphPanel graphPanel = new GraphPanel(simulation);
     	setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

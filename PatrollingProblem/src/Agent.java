@@ -1,19 +1,26 @@
 import java.util.Set;
+import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
 
 
 public class Agent {
-	public final static int idleTime = 100;
 	
-	public EventGraph graph;
+	public Simulation simulation;
+	
+	// Agent Properties
 	public String name;
 	public Vertex lastLocation;
-	public Set<EventEdge> boundary;
+	public EventEdge lastEdge = null;
 	public EventEdge currentEdge = null;
 	private Timer timer;
-	private int speedConstant;
+	public Set<EventEdge> boundary;
+	public Fraction serviceRate;
 	
+	// Movement logistics
+	private Stack<EventEdge> lastEdges;
+	
+	// Agent statistics
 	public int totalPriorityCollected;
 	public long totalDelay;
 	public int deadEventsCollected;
@@ -23,17 +30,26 @@ public class Agent {
 	public Vertex movingToLocation;
 	public long startTime;
 	public long endTime;
+	private boolean stopped = true;
 	
-	public Agent(String name, EventGraph graph, int speedConstant, Vertex location, Set<EventEdge> boundary) {
+	// Agent's have a name
+	// belong to a simulation
+	// have a starting location
+	// and can travel within a boundary
+	public Agent(String name, Simulation simulation, Vertex initialLocation, Set<EventEdge> boundary) {
 		this.name = name;
-		this.speedConstant = speedConstant;
-		this.graph = graph;
-		this.lastLocation = location;
-		this.movingToLocation = location;
-		this.boundary = boundary;
+		this.simulation = simulation;
+		this.lastLocation = initialLocation;
+		this.movingToLocation = initialLocation;
+		this.boundary = boundary; // null boundary allows the agent to move anywhere
 		this.timer = new Timer();
+		this.lastEdges = new Stack<EventEdge>();
+		
+		// Default service rate of 1
+		this.serviceRate = new Fraction(1, 1);
 	}
 	
+	// This task is used to by a Timer to move the agent
     class AgentMoveTask extends TimerTask {
     	private Agent agent;
     	
@@ -49,19 +65,35 @@ public class Agent {
     }
 
 	public double getAverageDelay() {
+		// Don't divide by zero. The universe may implode...
 		if (liveEventsCollected == 0) {
 			return 0;
 		}
-		return (double)totalDelay / (double)liveEventsCollected;
+		return (double)totalDelay / (double)liveEventsCollected / Simulation.timeConstant;
 	}
 	
 	private void move() {
 		
-		lastLocation = movingToLocation;
+		// Don't move if the agent has been stopped.
+		if (stopped) {
+			return;
+		}
+		
+		if (Simulation.verbose) {
+	    	System.out.println(this);			
+		}
+
+		lastEdge = currentEdge;
+    	lastLocation = movingToLocation;
+    	lastEdges.add(lastEdge);
 
 		// Find next movement choices within the agent's boundary
-		Set<EventEdge> adjacentEdges = graph.getAdjacentEdges(lastLocation);
-		adjacentEdges.retainAll(boundary);
+    	// Agent can move anywhere if there is no boundary
+		Set<EventEdge> adjacentEdges = simulation.graph.getAdjacentEdges(lastLocation);
+    	if (boundary != null) {
+    		adjacentEdges.retainAll(boundary);
+    		
+    	}
 		
 		// Looks for edge with highest priority
 		int highestPriority = -1;
@@ -72,6 +104,24 @@ public class Agent {
 				currentEdge = edge;
 			}
 		}
+		
+		// If all adjacent edges have no events, pick a new edge
+		if (highestPriority == 0) {
+			
+			// Avoid recently traversed edges
+			for (EventEdge edge : lastEdges) {
+				adjacentEdges.remove(edge);
+			}
+
+			// Pick a new edge
+			for (EventEdge edge : adjacentEdges) {
+				currentEdge = edge;
+				break;
+			}
+		} else {
+			// If the chosen edge has value, reset lastEdges
+			lastEdges.removeAllElements();
+		}
 
 		// Choose next location
 		Vertex nextLocation = currentEdge.getOtherVertex(lastLocation);
@@ -81,7 +131,7 @@ public class Agent {
 		Set<Event> collectedEvents = currentEdge.collectEvents();
 		for (Event event : collectedEvents) {
 			
-			// Collect the total priority and delay from each edge
+			// Collect the total priority and delay from each event on the edge
 			totalPriorityCollected += event.getPriority();
 			edgePriority += event.getPriority();
 			long delay = event.timeCollected.getTime() - event.timeGenerated.getTime();
@@ -95,27 +145,33 @@ public class Agent {
 			}
 		}
 		
+		// Traversal time for the visualization
 		startTime = endTime;
-		int traversalTime = (edgePriority * 1000) / speedConstant;
-		traversalTime = Math.max(idleTime, traversalTime);
-		endTime = startTime + traversalTime;
+		double serviceTime = serviceRate.evaluate() * Simulation.timeConstant;
+		double traversalTime = edgePriority * serviceTime;
+		traversalTime = Math.max(serviceTime, traversalTime); // Idle time is equal to service time
+		endTime = (long) (startTime + Math.ceil(traversalTime));
 		
 		// Schedule next movement
-		timer.schedule(new AgentMoveTask(this), traversalTime);
+		if (!stopped) {
+			timer.schedule(new AgentMoveTask(this), (long) Math.ceil(traversalTime));
+		}
 	}
 	
 	public void start() {
+		stopped = false;
 		startTime = System.currentTimeMillis();
 		endTime = startTime;
 		move();
 	}
 	
 	public void stop() {
+		stopped = true;
 		timer.cancel();
 	}
 
 	@Override
 	public String toString() {
-		return name + " at " + lastLocation.toString();
+		return name + " traversing (" + lastLocation.toString() + " to " + movingToLocation.toString() + ")";
 	}
 }

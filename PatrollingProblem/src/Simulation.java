@@ -6,59 +6,101 @@ import java.util.concurrent.CountDownLatch;
 
 
 public class Simulation {
+
+	public final static boolean verbose = false;
+	
+	// Simulation constants
 	public final static int minPriority = 1;
 	public final static int maxPriority = 10;
+	// Used to show the simulation is real time
+	// The range of agent traversal time is equal to the range of (minPriority*timeConstant) to (maxPriority*timeConstant)
+	public static int timeConstant = 1000; // The default time of a 'tick' is one second
 	
-	public Function eventValueFunction;
-	public int agentConstant;
-	public Function eventPeriod;
-	
+	// Visualization
+	public boolean isVisible;
 	public SimulationFrame graphFrame;
 	public EventGraph graph;
+
+	// Agents
 	public Set<Agent> agents;
 	public int totalAgents;
+	public Fraction serviceRate;
 	
+	// Simulation statistics
 	public int eventsGenerated = 0;
 	private int deadEventCount = 0;
-	public int maxEventsGenerated;
+	public int totalEvents;
 	
-	// Timers
-	private VariableTimer randomEventTimer;
+	// Timers and functions
+	private VariableTimer eventGeneratorTimer;
+	public Function eventValueFunction;
+	public Function eventPeriod;
 	
-	// Blocking
-	CountDownLatch latch;
+	// Default event generation function
+	private Fraction constantPeriodFraction = new Fraction(1,2);
+	private Function constantEventPeriod = new Function() {
+		public long function(long x) {
+			 // Two events are generated every 'tick'
+    		return (long) (Simulation.timeConstant * constantPeriodFraction.evaluate());
+    	}
+	};
+	
+	// Latch is to make the function 'simulation()' a blocking function
+	private CountDownLatch latch;
+	public boolean isBlocking = false;
 
 	public static void main(String[] args) {
 
-		// Event generation period
-		Function eventPeriod = new Function() {
+		// Event generation period (Exponential)
+		final Exponential exponential = new Exponential(1); // Default as 1
+		Function exponentialEventPeriod = new Function() {
 			public long function(long x) {
-//	    		return 500;
+
+				double exp = Simulation.timeConstant / exponential.nextExponential();
+				exp = Math.ceil(exp); // Round up to prevent time of 0
+				long longExp = (long) exp;
 				
-				// TODO: exponential distribution in MM1
-	    		return 2000/(x+1) + 100;
+				if (true) {
+					System.out.print("Next event generated in ");
+					System.out.printf("%.3f", (exp/1000));
+					System.out.println(" seconds");
+				}
+				
+				return longExp;
 	    	}
 		};
 
 		// Value of event over time
-		Function eventValue = new Function() {
+		Function decreasingValue = new Function() {
 			public long function(long x) {
-	    		return 2000 * x; // Decrements by 1 value every 2 seconds
+	    		return 2 * x; // Decrements by 1 value every 2 ticks
+	    	}
+		};
+		
+		// Constant event value
+		Function constantValue = new Function() {
+			public long function(long x) {
+	    		return 0; // Decrements by 0
 	    	}
 		};
 
-		Simulation simulation = new Simulation(eventValue, 10, 2, eventPeriod, 500);
-//		Simulation simulation = new Simulation(null, agentPeriod, 2, eventPeriod, 500);
+		Simulation simulation = new Simulation();
+//		simulation.eventValueFunction = constantValue;
+		simulation.eventValueFunction = decreasingValue;
+//		simulation.eventPeriod = exponentialEventPeriod;
+		simulation.totalAgents = 2;
+//		simulation.serviceRate = new Fraction(1,10);
 		simulation.simulate();
 	}
 	
-	public Simulation(Function eventValue,int agentConstant, int totalAgents, Function eventPeriod, int maxEventsGenerated) {
+	public Simulation() {
 		super();
-		this.eventValueFunction = eventValue;
-		this.agentConstant = agentConstant;
-		this.totalAgents = totalAgents;
-		this.eventPeriod = eventPeriod;
-		this.maxEventsGenerated = maxEventsGenerated;
+		
+		isVisible = true;
+		totalAgents = 1;
+		totalEvents = 500; // Default to 500 for display purposes.
+		eventPeriod = constantEventPeriod; // Default to a constant period
+		eventValueFunction = null; // Default: event value does not change
 		
 		this.latch = new CountDownLatch(1);
 	}
@@ -66,23 +108,25 @@ public class Simulation {
 	public void simulate() {
 		
 		graph = new EventGraph(5,5);
-//		System.out.println(graph);
 
-		graphFrame = new SimulationFrame(this);
+		if (isVisible) {
+			graphFrame = new SimulationFrame(this);
+		}
 		
 		setupAgents(totalAgents);
 		
 		// Add an event every x seconds
-		randomEventTimer = new VariableTimer();
-		randomEventTimer.scheduleAtVariableRate(new RandomEventTask(graph), eventPeriod);
-		
+		eventGeneratorTimer = new VariableTimer();
+		eventGeneratorTimer.scheduleAtVariableRate(new RandomEventTask(graph), eventPeriod);
 
 		// block this function until the simulation is over
-		try {
-			latch.await();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if (isBlocking) {
+			try {
+				latch.await();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -100,24 +144,29 @@ public class Simulation {
 		if (totalAgents == 1) {
 			// Create an agent in the top left of the graph
 			Vertex topLeftVertex = graph.vertexArray[0][0];
-			Agent agent = new Agent("A", graph, agentConstant, topLeftVertex, graph.edges);
+			Agent agent = new Agent("A", this, topLeftVertex, null);
 			agents.add(agent);
-			agent.start();
 		} else if (totalAgents == 2) {
 			Set<EventEdge> topHalf = graph.getEdges(0,0,2,4);
 			Set<EventEdge> bottomHalf = graph.getEdges(2,0,4,4);
 			
 			// Create an agent in the top left of the graph
 			Vertex topLeftVertex = graph.vertexArray[0][0];
-			Agent agentA = new Agent("A", graph, agentConstant, topLeftVertex, topHalf);
+			Agent agentA = new Agent("A", this, topLeftVertex, topHalf);
 			agents.add(agentA);
-			agentA.start();
 
 			// Create an agent in the bottom right of the graph
 			Vertex bottomRightVertex = graph.vertexArray[4][4];
-			Agent agentB = new Agent("B", graph, agentConstant, bottomRightVertex, bottomHalf);
+			Agent agentB = new Agent("B", this, bottomRightVertex, bottomHalf);
 			agents.add(agentB);
-			agentB.start();
+		}
+		
+		// Apply the service rate to all agents and then start
+		for (Agent agent : agents) {
+			if (serviceRate != null) {
+				agent.serviceRate = this.serviceRate;
+			}
+			agent.start();
 		}
 	}
 	
@@ -187,7 +236,7 @@ public class Simulation {
             eventsGenerated++;
             
             // End simulation after x amount of events generated
-            if (eventsGenerated >= maxEventsGenerated) {
+            if (eventsGenerated >= totalEvents) {
             	endSimulation();
             }
         }
@@ -196,7 +245,7 @@ public class Simulation {
     private void endSimulation() {
     	
     	// Cancel timers
-    	randomEventTimer.cancel();
+    	eventGeneratorTimer.cancel();
     	for (Agent agent : agents) {
     		agent.stop();
     	}
@@ -206,6 +255,8 @@ public class Simulation {
     	accumulateAgents();
         
         // Finish simulation
-        latch.countDown();
+    	if (isBlocking) {
+            latch.countDown();
+    	}
     }
 }

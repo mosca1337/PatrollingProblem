@@ -19,14 +19,14 @@ public class Event {
 		
 		// Decreasing priority
 		if (function != null) {
-			lifeSpan = function.function(1) * priority;
+			lifeSpan = Simulation.timeConstant * function.function(1) * priority;
 			timeOfDeath = new Date(lifeSpan + timeGenerated.getTime());
 		}
 	}
 	
 	public int getPriority() {
 		// Decreasing priority
-		if (function != null) {
+		if (function != null && (int) function.function(1) != 0) {
 			long currentTime = new Date().getTime() - timeGenerated.getTime();
 			double percentOfPriority = (double)currentTime / (double)lifeSpan;
 			percentOfPriority = Math.max(0, percentOfPriority);
