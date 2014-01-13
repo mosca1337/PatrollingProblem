@@ -15,7 +15,6 @@ public class SimulationManager {
 	// Event generation period (Constant)
 	public static Function constantEventPeriod = new Function() {
 		public long function(long x) {
-
     		return Simulation.timeConstant / 2; // Two events are generated every tick
     	}
 	};
