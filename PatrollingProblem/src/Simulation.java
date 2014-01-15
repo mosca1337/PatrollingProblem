@@ -56,17 +56,16 @@ public class Simulation {
 		Function exponentialEventPeriod = new Function() {
 			public long function(long x) {
 
-				double exp = Simulation.timeConstant / exponential.nextExponential();
-				exp = Math.ceil(exp); // Round up to prevent time of 0
-				long longExp = (long) exp;
+				double exponent = exponential.nextExponential();
+				long period = (long) (Simulation.timeConstant * exponent);
+				period = (long) Math.ceil(period); // Round up to prevent time of 0
 				
-				if (true) {
-					System.out.print("Next event generated in ");
-					System.out.printf("%.3f", (exp/1000));
-					System.out.println(" seconds");
-				}
+				// Display time in 'ticks'
+				System.out.print("Next event generated in ");
+				System.out.printf("%.3f", exponent);
+				System.out.println(" ticks");
 				
-				return longExp;
+				return period;
 	    	}
 		};
 
@@ -87,7 +86,7 @@ public class Simulation {
 		Simulation simulation = new Simulation();
 //		simulation.eventValueFunction = constantValue;
 		simulation.eventValueFunction = decreasingValue;
-//		simulation.eventPeriod = exponentialEventPeriod;
+		simulation.eventPeriod = exponentialEventPeriod;
 		simulation.totalAgents = 2;
 //		simulation.serviceRate = new Fraction(1,10);
 		simulation.simulate();

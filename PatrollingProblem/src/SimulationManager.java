@@ -12,7 +12,10 @@ public class SimulationManager {
 	public final static int trials = 10;
 	public final static int[] serviceRateConstants = {10,20,50};
 	
-	// Event generation period (Constant)
+	
+	// TODO: even
+	// TODO: even from 1.0 to 5.5 events per 'tick'
+	// Event generation period (Even)
 	public static Function constantEventPeriod = new Function() {
 		public long function(long x) {
     		return Simulation.timeConstant / 2; // Two events are generated every tick
@@ -24,18 +27,18 @@ public class SimulationManager {
 	public static Function exponentialEventPeriod = new Function() {
 		public long function(long x) {
 
-			double exp = Simulation.timeConstant / exponential.nextExponential();
-			exp = Math.ceil(exp); // Round up to prevent time of 0
-			long longExp = (long) exp;
+			double exponent = exponential.nextExponential();
+			long period = (long) (Simulation.timeConstant * exponent);
+			period = (long) Math.ceil(period); // Round up to prevent time of 0
 			
-			// Display time in seconds
-			if (Simulation.verbose) {
+			// Display time in 'ticks'
+			if (true) {
 				System.out.print("Next event generated in ");
-				System.out.printf("%.3f", (exp/1000));
-				System.out.println(" seconds");
+				System.out.printf("%.3f", exponent);
+				System.out.println(" ticks");
 			}
 			
-			return longExp;
+			return period;
     	}
 	};
 
@@ -53,7 +56,8 @@ public class SimulationManager {
     	}
 	};
 	
-	public static Function[] valueFunctions = {constantValue, decreasingValue};
+	public static Function[] valueFunctions = {constantValue, decreasingValue}; 
+	// TODO: show decreasing function instead of 'Decreasing' f = f0 - 0.5t
 	public static String[] valueFunctionStrings = {"Constant", "Decreasing"};
 
 	public static void main(String[] args) throws IOException {
@@ -143,6 +147,10 @@ public class SimulationManager {
 						avgDeadEvents /= trials;
 					
 						// TODO: There is no mean if the eventGeneration is constant
+						
+						// TODO: handled rate = event collected / all events
+						
+						// TODO: total collected = events from all agents
 						
 						// Record results
 						line = new String[]{df.format(mean), df.format(avgTotalCollected), df.format(avgDelay), df.format(avgAverageDelay), df.format(avgDeadEvents)};
