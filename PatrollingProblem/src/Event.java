@@ -25,6 +25,7 @@ public class Event {
 	}
 	
 	public int getPriority() {
+		
 		// Decreasing priority
 		if (function != null && (int) function.function(1) != 0) {
 			long currentTime = new Date().getTime() - timeGenerated.getTime();

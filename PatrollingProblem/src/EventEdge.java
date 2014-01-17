@@ -5,6 +5,7 @@ import java.util.Set;
 
 public class EventEdge extends Edge {
 	private Set<Event> events;
+	public boolean isBeingTraversed = false;
 
 	public EventEdge(String name, Vertex vertex1, Vertex vertex2) {
 		super(name, vertex1, vertex2);
@@ -20,8 +21,10 @@ public class EventEdge extends Edge {
 		
 		// Set time collected for each event
 		Date currentTime = new Date();
-		for (Event event : events) {
-			event.timeCollected = currentTime;
+		synchronized (events) {
+			for (Event event : events) {
+				event.timeCollected = currentTime;
+			}
 		}
 		
 		Set<Event> collectedEvents = new HashSet<Event>(events);
@@ -40,8 +43,10 @@ public class EventEdge extends Edge {
 	
 	public int getPriority() {
 		int totalPriority = 0;
-		for (Event event : events) {
-			totalPriority += event.getPriority();
+		synchronized (events) {
+			for (Event event : events) {
+				totalPriority += event.getPriority();
+			}
 		}
 		return totalPriority;
 	}
@@ -49,14 +54,16 @@ public class EventEdge extends Edge {
 	public Set<Event> removeDeadEvents() {
 		Set<Event> deadEvents = new HashSet<Event>();
 		Set<Event> liveEvents = new HashSet<Event>();
-		for (Event event : events) {
-			if (event.getPriority() <= 0) {
-				deadEvents.add(event);
-			} else {
-				liveEvents.add(event);
+		synchronized (events) {
+			for (Event event : events) {
+				if (event.getPriority() <= 0) {
+					deadEvents.add(event);
+				} else {
+					liveEvents.add(event);
+				}
 			}
-		}
-		events = liveEvents;
+			events = liveEvents;
+		}		
 		return deadEvents;
 	}
 	

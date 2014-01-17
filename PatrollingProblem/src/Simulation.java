@@ -88,6 +88,7 @@ public class Simulation {
 		simulation.eventValueFunction = decreasingValue;
 		simulation.eventPeriod = exponentialEventPeriod;
 		simulation.totalAgents = 2;
+		simulation.totalEvents = 100000;
 //		simulation.serviceRate = new Fraction(1,10);
 		simulation.simulate();
 	}
@@ -167,6 +168,25 @@ public class Simulation {
 			}
 			agent.start();
 		}
+	}
+	
+	public double getHandledRate() {
+		int liveEventsCollected = 0;
+		for (Agent agent : agents) {
+			liveEventsCollected += agent.liveEventsCollected;
+		}
+
+		double handledRate = (double) liveEventsCollected / (double) eventsGenerated;
+		
+		return handledRate;
+	}
+	
+	public int getLiveEventsCollected() {
+		int liveEventsCollected = 0;
+		for (Agent agent : agents) {
+			liveEventsCollected += agent.liveEventsCollected;
+		}
+		return liveEventsCollected;
 	}
 	
 	public int getTotalPriorityCollected() {

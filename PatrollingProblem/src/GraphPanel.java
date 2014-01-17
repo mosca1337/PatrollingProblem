@@ -11,6 +11,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
@@ -113,16 +115,16 @@ public class GraphPanel extends JPanel implements Runnable {
    }
    
    private void drawStats(Graphics2D g) {
-	   DecimalFormat df = new DecimalFormat("#.##");
+	   DecimalFormat df = new DecimalFormat("#,###.##");
 	   String averageDelayNumber = df.format(simulation.getAverageDelay()); // delay in seconds
 	   String averageDelay = "Average Delay: " + averageDelayNumber;
 	   g.setColor(Color.black);
 	   g.setFont(regularFont);
 
 	   g.drawString(averageDelay,edgeLength*2,-edgeLength/2);
-	   String eventsGenerated = "Events Generated: " + new Integer(simulation.eventsGenerated).toString() + " / " + simulation.totalEvents;
+	   String eventsGenerated = "Events Generated: " + NumberFormat.getNumberInstance(Locale.US).format(simulation.eventsGenerated) + " / " + NumberFormat.getNumberInstance(Locale.US).format(simulation.totalEvents);
 	   g.drawString(eventsGenerated,edgeLength/12,-edgeLength/2);
-	   String deadEvents = "Dead Events: " + new Integer(simulation.getDeadEventCount()).toString();
+	   String deadEvents = "Dead Events: " + NumberFormat.getNumberInstance(Locale.US).format(simulation.getDeadEventCount());
 	   g.drawString(deadEvents,edgeLength/12,-edgeLength/4);
    }
    

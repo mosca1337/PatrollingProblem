@@ -34,6 +34,11 @@
   		<groupId>VariableTimer</groupId>
   		<artifactId>VariableTimer</artifactId>
   	</dependency>
+  	<dependency>
+  		<groupId>org.jfree.chart</groupId>
+  		<artifactId>jfreechart-fse</artifactId>
+  		<version>1.0-SNAPSHOT</version>
+  	</dependency>
   </dependencies>
   <dependencyManagement>
   	<dependencies>
@@ -46,6 +51,11 @@
   			<groupId>VariableTimer</groupId>
   			<artifactId>VariableTimer</artifactId>
   			<version>0.0.1-SNAPSHOT</version>
+  		</dependency>
+  		<dependency>
+  			<groupId>org.jfree.chart</groupId>
+  			<artifactId>jfreechart-fse</artifactId>
+  			<version>1.0-SNAPSHOT</version>
   		</dependency>
   	</dependencies>
   </dependencyManagement>

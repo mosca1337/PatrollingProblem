@@ -1,3 +1,4 @@
+import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
 import java.util.Timer;
@@ -63,7 +64,7 @@ public class Agent {
         	agent.move();
         }
     }
-
+    
 	public double getAverageDelay() {
 		// Don't divide by zero. The universe may implode...
 		if (liveEventsCollected == 0) {
@@ -73,6 +74,11 @@ public class Agent {
 	}
 	
 	private void move() {
+		
+		// We are done traversing the edge
+		if (currentEdge != null) {
+			currentEdge.isBeingTraversed = false;
+		}
 		
 		// Don't move if the agent has been stopped.
 		if (stopped) {
@@ -92,8 +98,16 @@ public class Agent {
 		Set<EventEdge> adjacentEdges = simulation.graph.getAdjacentEdges(lastLocation);
     	if (boundary != null) {
     		adjacentEdges.retainAll(boundary);
-    		
     	}
+    	
+    	// Do not traverse an edge with another agent
+		Set<EventEdge> traversedEdges = new HashSet<EventEdge>();
+		for (EventEdge edge : adjacentEdges) {
+			if (edge.isBeingTraversed) {
+				traversedEdges.add(edge);
+			}
+		}
+		adjacentEdges.removeAll(traversedEdges);
 		
 		// Looks for edge with highest priority
 		int highestPriority = -1;
@@ -122,6 +136,11 @@ public class Agent {
 			// If the chosen edge has value, reset lastEdges
 			lastEdges.removeAllElements();
 		}
+		
+		// We are now traversing this edge
+		if (currentEdge != null) {
+			currentEdge.isBeingTraversed = true;
+		}
 
 		// Choose next location
 		Vertex nextLocation = currentEdge.getOtherVertex(lastLocation);
@@ -129,19 +148,21 @@ public class Agent {
 
 		int edgePriority = 0;
 		Set<Event> collectedEvents = currentEdge.collectEvents();
-		for (Event event : collectedEvents) {
-			
-			// Collect the total priority and delay from each event on the edge
-			totalPriorityCollected += event.getPriority();
-			edgePriority += event.getPriority();
-			long delay = event.timeCollected.getTime() - event.timeGenerated.getTime();
-			totalDelay += delay;
-			
-			// Count live and dead events
-			if (event.getPriority() <= 0) {
-				deadEventsCollected++;
-			} else {
-				liveEventsCollected++;
+		synchronized (collectedEvents) {
+			for (Event event : collectedEvents) {
+				
+				// Collect the total priority and delay from each event on the edge
+				totalPriorityCollected += event.getPriority();
+				edgePriority += event.getPriority();
+				long delay = event.timeCollected.getTime() - event.timeGenerated.getTime();
+				totalDelay += delay;
+				
+				// Count live and dead events
+				if (event.getPriority() <= 0) {
+					deadEventsCollected++;
+				} else {
+					liveEventsCollected++;
+				}
 			}
 		}
 		
