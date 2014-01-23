@@ -3,8 +3,12 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.Arrays;
 
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.NumberTickUnit;
+import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
@@ -21,7 +25,7 @@ public class SimulationManager {
 	// TODO: even from 1.0 to 5.5 events per 'tick'
 	// Event generation period (Even)
 	private static float constantEventPeriodMean = 2; // Default as 2
-	public static Function constantEventPeriod = new Function() {
+	public static Function evenEventPeriod = new Function() {
 		public long function(long x) {
     		return (long) Math.round(Simulation.timeConstant / constantEventPeriodMean); // Two events are generated every tick
     	}
@@ -37,10 +41,11 @@ public class SimulationManager {
 			period = (long) Math.ceil(period); // Round up to prevent time of 0
 			
 			// Display time in 'ticks'
-			if (true) {
+			if (Simulation.verbose) {
 				System.out.print("Next event generated in ");
 				System.out.printf("%.3f", exponent);
-				System.out.println(" ticks");
+				System.out.print(" ticks (");
+				System.out.println(period+" seconds)");
 			}
 			
 			return period;
@@ -65,7 +70,7 @@ public class SimulationManager {
 	// TODO: show decreasing function instead of 'Decreasing' f = f0 - 0.5t
 	public static String[] valueFunctionStrings = {"Constant", "Decreasing"};
 	
-	public static Function[] periodFunctions = {constantEventPeriod, exponentialEventPeriod};
+	public static Function[] periodFunctions = {evenEventPeriod, exponentialEventPeriod};
 
 	public static void main(String[] args) throws IOException {
 				
@@ -87,7 +92,7 @@ public class SimulationManager {
 		graphFolder.mkdirs();
 
 		// Accelerate the time of a 'tick'
-		Simulation.timeConstant = 25;
+		Simulation.timeConstant = 100;
 		
 		// Formatting output
 		DecimalFormat df = new DecimalFormat("#.###"); // 3 decimal places
@@ -96,9 +101,9 @@ public class SimulationManager {
 		for (Function periodFunction : periodFunctions) {
 			
 			String periodFunctionString = "";
-			if (periodFunction == constantEventPeriod) {
+			if (periodFunction == evenEventPeriod) {
 //				periodFunctionString = "f=" + new Double(constantEventPeriod.function(1) * Simulation.timeConstant).toString() + "t";
-				periodFunctionString = "Constant";
+				periodFunctionString = "Even";
 			} else if (periodFunction == exponentialEventPeriod) {
 //				periodFunctionString = new Double(constantEventPeriod.function(1) * Simulation.timeConstant).toString();
 				periodFunctionString = "Exponential";
@@ -110,11 +115,11 @@ public class SimulationManager {
 					Function valueFunction = valueFunctions[k];
 					
 					// Write CSV table header
-					String[] line = new String[]{"Agents:", String.valueOf(agents), "Event Value:", valueFunctionStrings[k]};
+					String[] line = new String[]{};
 					writer.writeNext(line);
 					writer.flushQuietly();
 					
-					// Visual graph dataset
+					// Visual graph data set
 					XYSeriesCollection eventsCollectedCollection = new XYSeriesCollection();
 					XYSeriesCollection deadEventsCollection = new XYSeriesCollection();
 					XYSeriesCollection averageDelayCollection = new XYSeriesCollection();
@@ -122,7 +127,7 @@ public class SimulationManager {
 
 					for (int serviceRateConstant : serviceRateConstants) {
 						
-						line = new String[]{"f/" + String.valueOf(serviceRateConstant)};
+						line = new String[]{"Event Generation:", periodFunctionString, "Agents:", String.valueOf(agents), "Event Value:", valueFunctionStrings[k], "Service Rate:", "f/" + String.valueOf(serviceRateConstant)};
 						writer.writeNext(line);
 						writer.flushQuietly();
 						line = new String[]{"Mean", "Events Collected", "Dead Events", "Weight Collected", "Delay", "AverageDelay", "Handled Rate"};
@@ -159,12 +164,11 @@ public class SimulationManager {
 							for (int i = 0; i < trials; i ++) {
 								// Create a simulation
 								Simulation simulation = new Simulation();
-								simulation.isBlocking = true;
 								simulation.totalAgents = agents;
 								simulation.serviceRate = serviceRate;
 //								simulation.totalEvents = 100000; // 100,000
 //								simulation.totalEvents = 100;
-								simulation.totalEvents = 1000;
+								simulation.totalEvents = 10000;
 								simulation.eventValueFunction = valueFunction;
 								simulation.eventPeriod = periodFunction;
 								simulation.isVisible = false;
@@ -225,7 +229,14 @@ public class SimulationManager {
 					LineChart averageDelayChart = new LineChart("Mean", "Average Delay", averageDelayCollection);
 					LineChart handledRateChart = new LineChart("Mean", "Handled Rate", handledRateCollection);
 					
-					File simulationFolder = new File(graphFolder, periodFunctionString+"/"+Integer.toString(agents)+"agents"+"/");
+					// Set tick size for handledRateChart
+			        XYPlot xyPlot = (XYPlot) handledRateChart.chart.getPlot();
+			        NumberAxis domain = (NumberAxis) xyPlot.getRangeAxis();
+			        domain.setNumberFormatOverride(NumberFormat.getPercentInstance());
+			        domain.setRange(0.00, 1.00);
+			        domain.setTickUnit(new NumberTickUnit(0.05));
+					
+					File simulationFolder = new File(graphFolder, periodFunctionString+"/"+Integer.toString(agents)+"agents"+"/"+valueFunctionStrings[k]+"/");
 					simulationFolder.mkdirs();
 					
 					File eventsCollectedFile = new File(simulationFolder, "eventsCollected.png");
@@ -233,10 +244,10 @@ public class SimulationManager {
 					File averageDelayFile = new File(simulationFolder, "averageDelay.png");
 					File handledRateFile = new File(simulationFolder, "handledRate.png");
 					
-					eventsCollectedChart.saveChart(eventsCollectedFile);
-					deadEventsChart.saveChart(deadEventsFile);
-					averageDelayChart.saveChart(averageDelayFile);
-					handledRateChart.saveChart(handledRateFile);
+					eventsCollectedChart.saveChartAsPNG(eventsCollectedFile);
+					deadEventsChart.saveChartAsPNG(deadEventsFile);
+					averageDelayChart.saveChartAsPNG(averageDelayFile);
+					handledRateChart.saveChartAsPNG(handledRateFile);
 				}
 			}
 		}

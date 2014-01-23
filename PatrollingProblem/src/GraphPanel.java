@@ -26,7 +26,6 @@ public class GraphPanel extends JPanel implements Runnable {
 	private final static int fps = 60;
 	private final static int skipTicks = 1000 / fps;
 	private long lastFrameTime;
-	public long startTime;
 
 	// Sizes and fonts
 	public final int padding = 80;
@@ -207,13 +206,13 @@ public class GraphPanel extends JPanel implements Runnable {
 	   currentPoint.x -= (agentImageWidth/2);
 	   currentPoint.y -= (agentImageHeight/2);
 		   
-	   long totalTime = agent.endTime - agent.startTime;
+	   double totalTime = agent.endTime - agent.startTime;
 	   long currentTime = System.currentTimeMillis();
 	   double percentComplete;
 	   if (totalTime == 0) {
 		   percentComplete = 1.0;
 	   } else {
-		   percentComplete = (1 - ((double)(agent.endTime - currentTime) / (double)totalTime));
+		   percentComplete = (1 - ((double)(agent.endTime + simulation.startTime - currentTime) / totalTime));
 	   }
 
 	   // Cannot be more than 100% complete
@@ -259,7 +258,7 @@ public class GraphPanel extends JPanel implements Runnable {
 	   int centerX = x + clockRadius;
 	   int centerY = y + clockRadius;
 	   
-	   long timeEllapsed = System.currentTimeMillis() - startTime;
+	   long timeEllapsed = System.currentTimeMillis() - (long) simulation.startTime;
 	   double clockPercentage = (double) (timeEllapsed % Simulation.timeConstant) / Simulation.timeConstant;
 	   int transparency = (int) ((clockPercentage - .5) * 256);
 	   transparency = Math.abs(transparency) - 50;
@@ -288,7 +287,6 @@ public class GraphPanel extends JPanel implements Runnable {
 
    public synchronized void start() {
 	   running = true;
-	   startTime = System.currentTimeMillis();
 	   thread = new Thread(this);
 	   thread.start();
    }

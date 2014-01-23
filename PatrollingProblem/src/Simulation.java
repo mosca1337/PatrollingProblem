@@ -1,9 +1,8 @@
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
-import java.util.TimerTask;
-import java.util.concurrent.CountDownLatch;
-
 
 public class Simulation {
 
@@ -15,6 +14,10 @@ public class Simulation {
 	// Used to show the simulation is real time
 	// The range of agent traversal time is equal to the range of (minPriority*timeConstant) to (maxPriority*timeConstant)
 	public static int timeConstant = 1000; // The default time of a 'tick' is one second
+	
+	// Time
+	public double startTime = 0;
+	private PriorityQueue<EventTask> eventQueue;
 	
 	// Visualization
 	public boolean isVisible;
@@ -32,7 +35,6 @@ public class Simulation {
 	public int totalEvents;
 	
 	// Timers and functions
-	private VariableTimer eventGeneratorTimer;
 	public Function eventValueFunction;
 	public Function eventPeriod;
 	
@@ -44,15 +46,11 @@ public class Simulation {
     		return (long) (Simulation.timeConstant * constantPeriodFraction.evaluate());
     	}
 	};
-	
-	// Latch is to make the function 'simulation()' a blocking function
-	private CountDownLatch latch;
-	public boolean isBlocking = false;
 
 	public static void main(String[] args) {
 
 		// Event generation period (Exponential)
-		final Exponential exponential = new Exponential(1); // Default as 1
+		final Exponential exponential = new Exponential(5.0); // Default as 1
 		Function exponentialEventPeriod = new Function() {
 			public long function(long x) {
 
@@ -61,9 +59,11 @@ public class Simulation {
 				period = (long) Math.ceil(period); // Round up to prevent time of 0
 				
 				// Display time in 'ticks'
-				System.out.print("Next event generated in ");
-				System.out.printf("%.3f", exponent);
-				System.out.println(" ticks");
+				if (Simulation.verbose) {
+					System.out.print("Next event generated in ");
+					System.out.printf("%.3f", exponent);
+					System.out.println(" ticks");
+				}
 				
 				return period;
 	    	}
@@ -84,12 +84,14 @@ public class Simulation {
 		};
 
 		Simulation simulation = new Simulation();
+//		simulation.isVisible = false;
 //		simulation.eventValueFunction = constantValue;
 		simulation.eventValueFunction = decreasingValue;
-		simulation.eventPeriod = exponentialEventPeriod;
+//		simulation.eventPeriod = exponentialEventPeriod;
 		simulation.totalAgents = 2;
+		
 		simulation.totalEvents = 100000;
-//		simulation.serviceRate = new Fraction(1,10);
+		simulation.serviceRate = new Fraction(1,10);
 		simulation.simulate();
 	}
 	
@@ -102,12 +104,19 @@ public class Simulation {
 		eventPeriod = constantEventPeriod; // Default to a constant period
 		eventValueFunction = null; // Default: event value does not change
 		
-		this.latch = new CountDownLatch(1);
+//		this.latch = new CountDownLatch(1);
 	}
 	
 	public void simulate() {
 		
 		graph = new EventGraph(5,5);
+		
+		// Event Queue
+		eventQueue = new PriorityQueue<EventTask>(totalEvents, new Comparator<EventTask>() {
+			public int compare(EventTask eventTask1, EventTask eventTask2) {
+				   return Double.compare(eventTask1.executionTime, eventTask2.executionTime);
+				}
+	    });
 
 		if (isVisible) {
 			graphFrame = new SimulationFrame(this);
@@ -116,18 +125,49 @@ public class Simulation {
 		setupAgents(totalAgents);
 		
 		// Add an event every x seconds
-		eventGeneratorTimer = new VariableTimer();
-		eventGeneratorTimer.scheduleAtVariableRate(new RandomEventTask(graph), eventPeriod);
+//		eventGeneratorTimer = new VariableTimer();
+//		eventGeneratorTimer.scheduleAtVariableRate(new RandomEventTask(graph), eventPeriod);
+		
+		// Generate all events
+		double eventTime = 0;
+		RandomEventTask lastEventTask = null;
+		for (int i = 0; i < totalEvents; i++) {
+			eventTime += eventPeriod.function(i);
+			lastEventTask = new RandomEventTask(eventTime, graph);
+			eventQueue.add(lastEventTask);
+		}
 
-		// block this function until the simulation is over
-		if (isBlocking) {
-			try {
-				latch.await();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+		// Set agents in motion
+		for (Agent agent : agents) {
+			AgentMoveTask agentMove = new AgentMoveTask(0.0, agent, eventQueue);
+			eventQueue.add(agentMove);
+		}
+		
+		startTime = System.currentTimeMillis();
+		
+		// Simulate all events
+		double lastExecutionTime = 0;
+		EventTask task = null;
+		while (task != lastEventTask) {
+			
+			// Current time
+			long now = 0; // Imaginary time
+			if (isVisible) {
+				now = System.currentTimeMillis(); // Real time
+			}
+			
+			// Has the event just passed?
+			if (!isVisible || now > (lastExecutionTime + startTime)) {
+				task = eventQueue.remove();
+//				System.out.println(task.executionTime);
+				lastExecutionTime = task.executionTime;
+				task.run();				
 			}
 		}
+		
+		// End of simulation
+    	removeDeadEvents();
+    	accumulateAgents();
 	}
 	
 	public void closeFrame() {
@@ -161,12 +201,11 @@ public class Simulation {
 			agents.add(agentB);
 		}
 		
-		// Apply the service rate to all agents and then start
+		// Apply the service rate to all agents
 		for (Agent agent : agents) {
 			if (serviceRate != null) {
 				agent.serviceRate = this.serviceRate;
 			}
-			agent.start();
 		}
 	}
 	
@@ -234,48 +273,44 @@ public class Simulation {
 		}
 	}
 	
-    class RandomEventTask extends TimerTask {
+    class RandomEventTask extends EventTask {
     	private EventGraph graph;
     	
-    	public RandomEventTask(EventGraph graph) {
+    	public RandomEventTask(Double executionTime, EventGraph graph) {
+    		super(executionTime);
     		this.graph = graph;
     	}
-    	
-        @Override
+
+		@Override
         public void run() {
     		// Select random edge
             Random rand = new Random();
             int randomInt = rand.nextInt(this.graph.edges.size());
             EventEdge edge = (EventEdge) this.graph.edges.toArray()[randomInt];
-            
+
             // Create random priority
             int randomPriority = minPriority + (int)(Math.random() * ((maxPriority - minPriority) + 1));
             Event event = new Event(randomPriority, eventValueFunction);
             edge.addEvent(event);
             eventsGenerated++;
-            
-            // End simulation after x amount of events generated
-            if (eventsGenerated >= totalEvents) {
-            	endSimulation();
-            }
-        }
+       }
     }
-    
-    private void endSimulation() {
+	
+    class AgentMoveTask extends EventTask {
+    	private Agent agent;
+    	private PriorityQueue<EventTask> queue;
     	
-    	// Cancel timers
-    	eventGeneratorTimer.cancel();
-    	for (Agent agent : agents) {
-    		agent.stop();
+    	public AgentMoveTask(Double executionTime, Agent agent, PriorityQueue<EventTask> queue) {
+    		super(executionTime);
+    		this.agent = agent;
+    		this.queue = queue;
     	}
-    	
-    	// Collect remaining dead events
-    	removeDeadEvents();
-    	accumulateAgents();
-        
-        // Finish simulation
-    	if (isBlocking) {
-            latch.countDown();
-    	}
+
+		@Override
+        public void run() {
+    		double movementTime = agent.move(executionTime);
+    		AgentMoveTask nextMovementTask = new AgentMoveTask(movementTime, agent, queue);
+    		queue.add(nextMovementTask);
+        }
     }
 }

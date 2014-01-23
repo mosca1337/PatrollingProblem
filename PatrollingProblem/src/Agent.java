@@ -14,7 +14,6 @@ public class Agent {
 	public Vertex lastLocation;
 	public EventEdge lastEdge = null;
 	public EventEdge currentEdge = null;
-	private Timer timer;
 	public Set<EventEdge> boundary;
 	public Fraction serviceRate;
 	
@@ -29,9 +28,8 @@ public class Agent {
 	
 	// Animation properties
 	public Vertex movingToLocation;
-	public long startTime;
-	public long endTime;
-	private boolean stopped = true;
+	public double startTime;
+	public double endTime;
 	
 	// Agent's have a name
 	// belong to a simulation
@@ -43,27 +41,11 @@ public class Agent {
 		this.lastLocation = initialLocation;
 		this.movingToLocation = initialLocation;
 		this.boundary = boundary; // null boundary allows the agent to move anywhere
-		this.timer = new Timer();
 		this.lastEdges = new Stack<EventEdge>();
 		
 		// Default service rate of 1
 		this.serviceRate = new Fraction(1, 1);
 	}
-	
-	// This task is used to by a Timer to move the agent
-    class AgentMoveTask extends TimerTask {
-    	private Agent agent;
-    	
-    	public AgentMoveTask(Agent agent) {
-    		this.agent = agent;
-    	}
-    	
-        @Override
-        public void run() {
-        	// Move the agent
-        	agent.move();
-        }
-    }
     
 	public double getAverageDelay() {
 		// Don't divide by zero. The universe may implode...
@@ -73,16 +55,13 @@ public class Agent {
 		return (double)totalDelay / (double)liveEventsCollected / Simulation.timeConstant;
 	}
 	
-	private void move() {
+	public double move(double startTime) {
+		this.startTime = startTime;
+		this.endTime = startTime;
 		
 		// We are done traversing the edge
 		if (currentEdge != null) {
 			currentEdge.isBeingTraversed = false;
-		}
-		
-		// Don't move if the agent has been stopped.
-		if (stopped) {
-			return;
 		}
 		
 		if (Simulation.verbose) {
@@ -108,6 +87,7 @@ public class Agent {
 			}
 		}
 		adjacentEdges.removeAll(traversedEdges);
+		adjacentEdges.remove(lastEdge);
 		
 		// Looks for edge with highest priority
 		int highestPriority = -1;
@@ -173,22 +153,7 @@ public class Agent {
 		traversalTime = Math.max(serviceTime, traversalTime); // Idle time is equal to service time
 		endTime = (long) (startTime + Math.ceil(traversalTime));
 		
-		// Schedule next movement
-		if (!stopped) {
-			timer.schedule(new AgentMoveTask(this), (long) Math.ceil(traversalTime));
-		}
-	}
-	
-	public void start() {
-		stopped = false;
-		startTime = System.currentTimeMillis();
-		endTime = startTime;
-		move();
-	}
-	
-	public void stop() {
-		stopped = true;
-		timer.cancel();
+		return endTime;
 	}
 
 	@Override

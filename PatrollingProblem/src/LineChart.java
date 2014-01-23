@@ -7,6 +7,7 @@ import org.jfree.chart.ChartPanel;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
@@ -29,7 +30,7 @@ public class LineChart extends ApplicationFrame {
 
 	private static final long serialVersionUID = -8547876522897390460L;
 	
-	private JFreeChart chart;
+	public JFreeChart chart;
 	private String title;
 	private String xLabel;
 	private String yLabel;
@@ -116,6 +117,10 @@ public class LineChart extends ApplicationFrame {
 //        plot.setDomainGridlinePaint(Color.lightGray);
         plot.setRangeGridlinePaint(Color.lightGray);
         
+        NumberAxis xAxis = new NumberAxis();
+        xAxis.setTickUnit(new NumberTickUnit(0.5));
+        plot.setDomainAxis(xAxis);
+        
         final XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
         renderer.setSeriesShape(1, ShapeUtilities.createDiamond(5));
 
@@ -136,7 +141,7 @@ public class LineChart extends ApplicationFrame {
         return chart;
     }
     
-    public void saveChart(File file) {
+    public void saveChartAsPNG(File file) {
     	try {
 			ChartUtilities.saveChartAsPNG(file, chart, width, height);
 		} catch (IOException e) {
