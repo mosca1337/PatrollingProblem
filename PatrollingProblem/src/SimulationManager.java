@@ -168,7 +168,7 @@ public class SimulationManager {
 								simulation.serviceRate = serviceRate;
 //								simulation.totalEvents = 100000; // 100,000
 //								simulation.totalEvents = 100;
-								simulation.totalEvents = 10000;
+								simulation.totalEvents = 1000;
 								simulation.eventValueFunction = valueFunction;
 								simulation.eventPeriod = periodFunction;
 								simulation.isVisible = false;

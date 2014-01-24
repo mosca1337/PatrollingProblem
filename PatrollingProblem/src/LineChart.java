@@ -1,6 +1,8 @@
 import java.awt.Color;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.Writer;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
@@ -20,6 +22,9 @@ import org.jfree.chart.util.ShapeUtilities;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
+import org.omg.CORBA.portable.OutputStream;
+import org.w3c.dom.DOMImplementation;
+import org.w3c.dom.Document;
 
 /**
  * A simple demonstration application showing how to create a line chart using data from an
@@ -149,6 +154,26 @@ public class LineChart extends ApplicationFrame {
 			e.printStackTrace();
 		}
     }
+    
+//    public void saveChartAsSVG(File file) {
+//        // Get a DOMImplementation and create an XML document
+//        DOMImplementation domImpl =
+//            GenericDOMImplementation.getDOMImplementation();
+//        Document document = domImpl.createDocument(null, "svg", null);
+//
+//        // Create an instance of the SVG Generator
+//        SVGGraphics2D svgGenerator = new SVGGraphics2D(document);
+//
+//        // draw the chart in the SVG generator
+//        chart.draw(svgGenerator, bounds);
+//
+//        // Write svg file
+//        OutputStream outputStream = new FileOutputStream(svgFile);
+//        Writer out = new OutputStreamWriter(outputStream, "UTF-8");
+//        svgGenerator.stream(out, true /* use css */);						
+//        outputStream.flush();
+//        outputStream.close();
+//    }
     
     /**
      * Starting point for the demonstration application.

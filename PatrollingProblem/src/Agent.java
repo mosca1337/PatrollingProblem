@@ -92,7 +92,7 @@ public class Agent {
 		// Looks for edge with highest priority
 		int highestPriority = -1;
 		for (EventEdge edge : adjacentEdges) {
-			int edgePriority = edge.getPriority();
+			int edgePriority = edge.getPriority(startTime);
 			if (edgePriority > highestPriority) {
 				highestPriority = edgePriority;
 				currentEdge = edge;
@@ -127,22 +127,20 @@ public class Agent {
 		movingToLocation = nextLocation;
 
 		int edgePriority = 0;
-		Set<Event> collectedEvents = currentEdge.collectEvents();
-		synchronized (collectedEvents) {
-			for (Event event : collectedEvents) {
-				
-				// Collect the total priority and delay from each event on the edge
-				totalPriorityCollected += event.getPriority();
-				edgePriority += event.getPriority();
-				long delay = event.timeCollected.getTime() - event.timeGenerated.getTime();
-				totalDelay += delay;
-				
-				// Count live and dead events
-				if (event.getPriority() <= 0) {
-					deadEventsCollected++;
-				} else {
-					liveEventsCollected++;
-				}
+		Set<Event> collectedEvents = currentEdge.collectEvents(startTime);
+		for (Event event : collectedEvents) {
+			
+			// Collect the total priority and delay from each event on the edge
+			totalPriorityCollected += event.getPriority(startTime);
+			edgePriority += event.getPriority(startTime);
+			double delay = event.timeCollected - event.timeGenerated;
+			totalDelay += delay;
+			
+			// Count live and dead events
+			if (event.getPriority(startTime) <= 0) {
+				deadEventsCollected++;
+			} else {
+				liveEventsCollected++;
 			}
 		}
 		
@@ -151,7 +149,7 @@ public class Agent {
 		double serviceTime = serviceRate.evaluate() * Simulation.timeConstant;
 		double traversalTime = edgePriority * serviceTime;
 		traversalTime = Math.max(serviceTime, traversalTime); // Idle time is equal to service time
-		endTime = (long) (startTime + Math.ceil(traversalTime));
+		endTime = startTime + Math.ceil(traversalTime);
 		
 		return endTime;
 	}

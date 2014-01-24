@@ -120,10 +120,10 @@ public class EventGraph {
 		return edges;
 	}
 	
-	public Set<Event> removeDeadEvents() {
+	public Set<Event> removeDeadEvents(double time) {
 		Set<Event> deadEvents = new HashSet<Event>();
 		for (EventEdge edge : edges) {
-			deadEvents.addAll(edge.removeDeadEvents());
+			deadEvents.addAll(edge.removeDeadEvents(time));
 		}
 		return deadEvents;
 	}

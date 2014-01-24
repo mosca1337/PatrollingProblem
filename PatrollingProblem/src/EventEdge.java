@@ -17,14 +17,11 @@ public class EventEdge extends Edge {
 		events.add(event);
 	}
 	
-	public Set<Event> collectEvents() {
+	public Set<Event> collectEvents(double time) {
 		
 		// Set time collected for each event
-		Date currentTime = new Date();
-		synchronized (events) {
-			for (Event event : events) {
-				event.timeCollected = currentTime;
-			}
+		for (Event event : events) {
+			event.timeCollected = time;
 		}
 		
 		Set<Event> collectedEvents = new HashSet<Event>(events);
@@ -41,22 +38,20 @@ public class EventEdge extends Edge {
 		events = new HashSet<Event>();
 	}
 	
-	public int getPriority() {
+	public int getPriority(double time) {
 		int totalPriority = 0;
-		synchronized (events) {
-			for (Event event : events) {
-				totalPriority += event.getPriority();
-			}
+		for (Event event : events) {
+			totalPriority += event.getPriority(time);
 		}
 		return totalPriority;
 	}
 	
-	public Set<Event> removeDeadEvents() {
+	public Set<Event> removeDeadEvents(double time) {
 		Set<Event> deadEvents = new HashSet<Event>();
 		Set<Event> liveEvents = new HashSet<Event>();
 		synchronized (events) {
 			for (Event event : events) {
-				if (event.getPriority() <= 0) {
+				if (event.getPriority(time) <= 0) {
 					deadEvents.add(event);
 				} else {
 					liveEvents.add(event);
@@ -67,8 +62,8 @@ public class EventEdge extends Edge {
 		return deadEvents;
 	}
 	
-	@Override
-	public String toString() {
-		return "[Edge:"+(new Integer(getPriority()).toString()) + "]";
-	}
+//	@Override
+//	public String toString() {
+//		return "[Edge:"+(new Integer(getPriority()).toString()) + "]";
+//	}
 }
