@@ -84,7 +84,7 @@ public class Simulation {
 		};
 
 		Simulation simulation = new Simulation();
-//		simulation.isVisible = false;
+		simulation.isVisible = false;
 //		simulation.eventValueFunction = constantValue;
 		simulation.eventValueFunction = decreasingValue;
 //		simulation.eventPeriod = exponentialEventPeriod;
@@ -93,6 +93,9 @@ public class Simulation {
 		simulation.totalEvents = 100000;
 		simulation.serviceRate = new Fraction(1,10);
 		simulation.simulate();
+		
+		simulation.getAverageDelay();
+		simulation.getDeadEventCount();
 	}
 	
 	public Simulation() {

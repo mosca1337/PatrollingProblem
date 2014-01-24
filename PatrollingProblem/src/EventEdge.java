@@ -43,10 +43,8 @@ public class EventEdge extends Edge {
 	
 	public int getPriority() {
 		int totalPriority = 0;
-		synchronized (events) {
-			for (Event event : events) {
-				totalPriority += event.getPriority();
-			}
+		for (Event event : events) {
+			totalPriority += event.getPriority();
 		}
 		return totalPriority;
 	}
@@ -54,16 +52,14 @@ public class EventEdge extends Edge {
 	public Set<Event> removeDeadEvents() {
 		Set<Event> deadEvents = new HashSet<Event>();
 		Set<Event> liveEvents = new HashSet<Event>();
-		synchronized (events) {
-			for (Event event : events) {
-				if (event.getPriority() <= 0) {
-					deadEvents.add(event);
-				} else {
-					liveEvents.add(event);
-				}
+		for (Event event : events) {
+			if (event.getPriority() <= 0) {
+				deadEvents.add(event);
+			} else {
+				liveEvents.add(event);
 			}
-			events = liveEvents;
-		}		
+		}
+		events = liveEvents;
 		return deadEvents;
 	}
 	
