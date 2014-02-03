@@ -17,7 +17,7 @@ import au.com.bytecode.opencsv.CSVWriter;
 
 public class SimulationManager {
 	public final static int trials = 10;
-	public final static int totalAgents = 2;
+	public final static int totalAgents = 4;
 	public final static int[] serviceRateConstants = {10,20,50};
 	
 	
@@ -166,9 +166,9 @@ public class SimulationManager {
 								Simulation simulation = new Simulation();
 								simulation.totalAgents = agents;
 								simulation.serviceRate = serviceRate;
-//								simulation.totalEvents = 100000; // 100,000
+								simulation.totalEvents = 100000; // 100,000
 //								simulation.totalEvents = 100;
-								simulation.totalEvents = 10000;
+//								simulation.totalEvents = 1000;
 								simulation.eventValueFunction = valueFunction;
 								simulation.eventPeriod = periodFunction;
 								simulation.isVisible = false;

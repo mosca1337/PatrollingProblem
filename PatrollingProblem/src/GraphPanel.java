@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Date;
 import java.util.Locale;
 
 import javax.imageio.ImageIO;
@@ -54,6 +55,8 @@ public class GraphPanel extends JPanel implements Runnable {
 	public int width;
 	public int height;
 	
+	private Date now;
+	
     public GraphPanel(Simulation simulation){
     	this.simulation = simulation;
     	
@@ -80,6 +83,9 @@ public class GraphPanel extends JPanel implements Runnable {
    public void paintComponent(Graphics g){
 	   
 	   Graphics2D graphics2D = (Graphics2D) g;
+	   
+	   // Now
+	   now = new Date();
 	   
 	   // Turn on anti-aliasing
 	   graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -140,10 +146,10 @@ public class GraphPanel extends JPanel implements Runnable {
 
 	   g.setColor(Color.black);
 //	   g.setStroke(new BasicStroke(edge.getEvents().size()));
-	   g.setStroke(new BasicStroke(edge.getPriority()/5 + 1));
+	   g.setStroke(new BasicStroke(edge.getPriority(now.getTime())/5 + 1));
 	   g.drawLine(pointA.x, pointA.y, pointB.x, pointB.y);
 	   
-	   int priority = edge.getPriority();
+	   int priority = edge.getPriority(now.getTime());
 	   Color redColor;
 	   Font font;
 	   if (priority == 0) {
@@ -156,7 +162,7 @@ public class GraphPanel extends JPanel implements Runnable {
 	   g.setFont(font);
 	   g.setColor(redColor);
 	   
-	   String priorityString = new Integer(edge.getPriority()).toString();
+	   String priorityString = new Integer(edge.getPriority(now.getTime())).toString();
 	   FontMetrics metrics = g.getFontMetrics(font);
 	   int stringWidth = metrics.stringWidth(priorityString);
 	   int stringHeight = metrics.getHeight();
