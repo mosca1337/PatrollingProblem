@@ -89,7 +89,7 @@ public class Simulation {
 //		simulation.eventValueFunction = constantValue;
 		simulation.eventValueFunction = decreasingValue;
 //		simulation.eventPeriod = exponentialEventPeriod;
-		simulation.totalAgents = 2;
+		simulation.totalAgents = 3;
 		
 		simulation.totalEvents = 100000;
 //		simulation.serviceRate = new Fraction(1,10);
@@ -200,6 +200,50 @@ public class Simulation {
 			Vertex bottomRightVertex = graph.vertexArray[4][4];
 			Agent agentB = new Agent("B", this, bottomRightVertex, bottomHalf);
 			agents.add(agentB);
+		} else if (totalAgents == 3) {
+			Set<EventEdge> topHalf = graph.getEdges(0,0,1,4);
+			Set<EventEdge> middleHalf = graph.getEdges(1,0,3,4);
+			Set<EventEdge> bottomHalf = graph.getEdges(3,0,4,4);
+			
+			// Create an agent in the top left of the graph
+			Vertex topLeftVertex = graph.vertexArray[0][0];
+			Agent agentA = new Agent("A", this, topLeftVertex, topHalf);
+			agents.add(agentA);
+
+			// Create an agent in the bottom right of the graph
+			Vertex middleVertex = graph.vertexArray[2][2];
+			Agent agentB = new Agent("B", this, middleVertex, middleHalf);
+			agents.add(agentB);
+
+			// Create an agent in the bottom right of the graph
+			Vertex bottomRightVertex = graph.vertexArray[4][4];
+			Agent agentC = new Agent("C", this, bottomRightVertex, bottomHalf);
+			agents.add(agentC);
+		} else if (totalAgents == 4) {
+			Set<EventEdge> topLeft = graph.getEdges(0,0,2,2);
+			Set<EventEdge> topRight = graph.getEdges(0,2,2,4);
+			Set<EventEdge> bottomLeft = graph.getEdges(2,0,4,2);
+			Set<EventEdge> bottomRight = graph.getEdges(2,2,4,4);
+
+			// Create an agent in the top left of the graph
+			Vertex topLeftVertex = graph.vertexArray[0][0];
+			Agent agentA = new Agent("A", this, topLeftVertex, topLeft);
+			agents.add(agentA);
+
+			// Create an agent in the bottom right of the graph
+			Vertex topRightVertex = graph.vertexArray[0][4];
+			Agent agentB = new Agent("B", this, topRightVertex, topRight);
+			agents.add(agentB);
+
+			// Create an agent in the bottom right of the graph
+			Vertex bottomLeftVertex = graph.vertexArray[4][0];
+			Agent agentC = new Agent("C", this, bottomLeftVertex, bottomLeft);
+			agents.add(agentC);
+
+			// Create an agent in the bottom right of the graph
+			Vertex bottomRightVertex = graph.vertexArray[4][4];
+			Agent agentD = new Agent("D", this, bottomRightVertex, bottomRight);
+			agents.add(agentD);
 		}
 		
 		// Apply the service rate to all agents

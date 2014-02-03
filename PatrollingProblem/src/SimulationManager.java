@@ -17,7 +17,7 @@ import au.com.bytecode.opencsv.CSVWriter;
 
 public class SimulationManager {
 	public final static int trials = 10;
-	public final static int totalAgents = 2;
+	public final static int totalAgents = 4;
 	public final static int[] serviceRateConstants = {10,20,50};
 	
 	
