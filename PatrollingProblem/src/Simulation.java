@@ -85,11 +85,11 @@ public class Simulation {
 		};
 
 		Simulation simulation = new Simulation();
-		simulation.isVisible = false;
+		simulation.isVisible = true;
 //		simulation.eventValueFunction = constantValue;
 		simulation.eventValueFunction = decreasingValue;
 //		simulation.eventPeriod = exponentialEventPeriod;
-		simulation.totalAgents = 3;
+		simulation.totalAgents = 4;
 		
 		simulation.totalEvents = 100000;
 //		simulation.serviceRate = new Fraction(1,10);
@@ -107,13 +107,12 @@ public class Simulation {
 		totalEvents = 500; // Default to 500 for display purposes.
 		eventPeriod = constantEventPeriod; // Default to a constant period
 		eventValueFunction = null; // Default: event value does not change
-		
-//		this.latch = new CountDownLatch(1);
 	}
 	
 	public void simulate() {
 		
 		graph = new EventGraph(5,5);
+		setupAgents(totalAgents);
 		
 		// Event Queue
 		eventQueue = new PriorityQueue<EventTask>(totalEvents, new Comparator<EventTask>() {
@@ -125,12 +124,6 @@ public class Simulation {
 		if (isVisible) {
 			graphFrame = new SimulationFrame(this);
 		}
-		
-		setupAgents(totalAgents);
-		
-		// Add an event every x seconds
-//		eventGeneratorTimer = new VariableTimer();
-//		eventGeneratorTimer.scheduleAtVariableRate(new RandomEventTask(graph), eventPeriod);
 		
 		// Generate all events
 		double eventTime = 0;
@@ -163,7 +156,6 @@ public class Simulation {
 			// Has the event just passed?
 			if (!isVisible || now > (lastExecutionTime + startTime)) {
 				task = eventQueue.remove();
-//				System.out.println(task.executionTime);
 				lastExecutionTime = task.executionTime;
 				task.run();				
 			}
@@ -252,7 +244,7 @@ public class Simulation {
 		// Apply the service rate to all agents
 		for (Agent agent : agents) {
 			if (serviceRate != null) {
-				agent.serviceRate = this.serviceRate;
+				agent.setServiceRate(this.serviceRate);
 			}
 		}
 	}

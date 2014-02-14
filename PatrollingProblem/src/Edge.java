@@ -33,8 +33,21 @@ public class Edge {
 		return vertices;
 	}
 	
+//	@Override
+//    public boolean equals(Object obj) {
+//        if (obj == null)
+//            return false;
+//        if (obj == this)
+//            return true;
+//        if (!(obj instanceof Edge))
+//            return false;
+//
+//        Edge rhs = (Edge) obj;
+//        return (this.vertex1 == rhs.vertex1 && this.vertex2 == rhs.vertex2 || this.vertex1 == rhs.vertex2 && this.vertex2 == rhs.vertex1);
+//    }
+
 	@Override
 	public String toString() {
-		return name + " Edge("+vertex1.toString()+","+vertex2.toString()+")";
+		return " Edge("+vertex1.toString()+","+vertex2.toString()+")" + name;
 	}
 }

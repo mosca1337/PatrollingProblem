@@ -13,7 +13,10 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
 
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
@@ -56,9 +59,39 @@ public class GraphPanel extends JPanel implements Runnable {
 	public int height;
 	
 	private Date now;
+	private Map<Agent,Color> boundaryColors = new HashMap<Agent,Color>();
+	private Map<EventEdge,Color> edgeColors = new HashMap<EventEdge,Color>();
 	
     public GraphPanel(Simulation simulation){
     	this.simulation = simulation;
+    	
+    	// Setup boundary colors
+		Random rand = new Random();
+		float hue = rand.nextFloat();
+		float equalSpacing = (float) (1.0 / simulation.agents.size());
+    	for (Agent agent : simulation.agents) {
+    		
+    		// Set random color
+    		hue = (hue + equalSpacing) % 1.0f;
+    		Color randomColor = Color.getHSBColor(hue, 1.0f, 1.0f); // hue, saturation, value
+
+    		boundaryColors.put(agent, randomColor);
+
+    		if (agent.boundary != null) {
+        		for (EventEdge edge : agent.boundary) {
+
+            		// Blend colors if two agent's boundary's share an edge
+            		if (edgeColors.containsKey(edge)) {
+            			Color originalColor = edgeColors.get(edge);
+            			Color blendedColor = ColorUtil.blend(originalColor, randomColor);
+            			edgeColors.put(edge, blendedColor);
+            			
+            		} else {
+            			edgeColors.put(edge, randomColor);
+            		}
+        		}
+    		}
+    	}
     	
     	// Load agent image
     	try {
@@ -136,20 +169,64 @@ public class GraphPanel extends JPanel implements Runnable {
    private void drawEdge(Graphics2D g, EventEdge edge) {
 	   Vertex vertexA = edge.vertex1;
 	   Vertex vertexB = edge.vertex2;
-	   Point pointA = new Point(vertexA.y*edgeLength,vertexA.x*edgeLength);
-	   Point pointB = new Point(vertexB.y*edgeLength,vertexB.x*edgeLength);
+	   Point pointA = new Point(vertexA.y * edgeLength,vertexA.x * edgeLength);
+	   Point pointB = new Point(vertexB.y * edgeLength,vertexB.x * edgeLength);
 	   
 	   // For getting line direction
 	   double pointDistance = Math.sqrt(Math.pow(pointB.y - pointA.y,2) + Math.pow(pointB.x - pointA.x,2));
 	   double heightPercentage = (pointB.y - pointA.y) / pointDistance;
 	   double widthPercentage = (pointB.x - pointA.x) / pointDistance;
 
-	   g.setColor(Color.black);
-//	   g.setStroke(new BasicStroke(edge.getEvents().size()));
-	   g.setStroke(new BasicStroke(edge.getPriority(now.getTime())/5 + 1));
-	   g.drawLine(pointA.x, pointA.y, pointB.x, pointB.y);
+	   Color edgeColor = edgeColors.get(edge);
+	   if (edgeColor == null) {
+		   g.setColor(Color.black);
+	   }
 	   
-	   int priority = edge.getPriority(now.getTime());
+	   // Bold line when an agent will traverse this edge
+	   boolean agentWillTraverse = false;
+	   Agent edgesAgent = null;
+	   for (Agent agent : simulation.agents) {
+		   if (edge == agent.currentEdge || agent.movementSequence.contains(edge)) {
+			   agentWillTraverse = true;
+			   edgesAgent = agent;
+			   break;
+		   }
+	   }
+	   if (agentWillTraverse) {
+		   g.setStroke(new BasicStroke(5));
+		   
+		   // Force ownership of edge color
+		   if (edgeColors.containsKey(edge)) {
+			   edgeColor = boundaryColors.get(edgesAgent);
+		   }
+	   } else {
+		   g.setStroke(new BasicStroke(1));
+	   }
+	   
+	   g.setColor(edgeColor);
+
+	   // Is this edge being traversed?
+	   if (edge.isBeingTraversed() && edge.agents.contains(edgesAgent)) {
+		   // Find the agent's current position
+		   Point agentPoint = this.getAgentPoint(edgesAgent);
+		   agentPoint.x += agentImageWidth / 2;
+		   agentPoint.y += agentImageHeight / 2;
+		   
+		   // Draw half bold line
+		   if (edgesAgent.lastVertex == vertexA) {
+			   g.drawLine(agentPoint.x, agentPoint.y, pointB.x, pointB.y);
+			   g.setStroke(new BasicStroke(1));
+			   g.drawLine(pointA.x, pointA.y, agentPoint.x, agentPoint.y);
+		   } else {
+			   g.drawLine(pointA.x, pointA.y, agentPoint.x, agentPoint.y);
+			   g.setStroke(new BasicStroke(1));
+			   g.drawLine(agentPoint.x, agentPoint.y, pointB.x, pointB.y);
+		   }
+	   } else {
+		   g.drawLine(pointA.x, pointA.y, pointB.x, pointB.y);
+	   }
+	   
+	   int priority = edge.getPriority(now.getTime() - simulation.startTime);
 	   Color redColor;
 	   Font font;
 	   if (priority == 0) {
@@ -162,7 +239,7 @@ public class GraphPanel extends JPanel implements Runnable {
 	   g.setFont(font);
 	   g.setColor(redColor);
 	   
-	   String priorityString = new Integer(edge.getPriority(now.getTime())).toString();
+	   String priorityString = new Integer(edge.getPriority(now.getTime() - simulation.startTime)).toString();
 	   FontMetrics metrics = g.getFontMetrics(font);
 	   int stringWidth = metrics.stringWidth(priorityString);
 	   int stringHeight = metrics.getHeight();
@@ -201,13 +278,14 @@ public class GraphPanel extends JPanel implements Runnable {
 	   g.drawString(vertex.name, point.x, point.y);
    }
    
-   private void drawAgent(Graphics2D g, Agent agent) {
-	   Vertex vertex = agent.lastLocation;
+   private Point getAgentPoint(Agent agent) {
+	   
+	   Vertex vertex = agent.lastVertex;
 	   Point point = new Point(vertex.y*edgeLength, vertex.x*edgeLength);
 	   point.x -= (agentImageWidth/2);
 	   point.y -= (agentImageHeight/2);
 
-	   Vertex nextVertex = agent.movingToLocation;
+	   Vertex nextVertex = agent.movingToVertex;
 	   Point currentPoint = new Point(nextVertex.y*edgeLength, nextVertex.x*edgeLength);
 	   currentPoint.x -= (agentImageWidth/2);
 	   currentPoint.y -= (agentImageHeight/2);
@@ -227,6 +305,18 @@ public class GraphPanel extends JPanel implements Runnable {
 		   
 	   point.x += (currentPoint.x - point.x) * percentComplete;
 	   point.y += (currentPoint.y - point.y) * percentComplete;
+
+	   return point;
+   }
+   
+   private void drawAgent(Graphics2D g, Agent agent) {
+	   
+	   Vertex nextVertex = agent.movingToVertex;
+	   Point currentPoint = new Point(nextVertex.y*edgeLength, nextVertex.x*edgeLength);
+	   currentPoint.x -= (agentImageWidth/2);
+	   currentPoint.y -= (agentImageHeight/2);
+
+	   Point point = this.getAgentPoint(agent);
 	   
 	   // Different sides images of the agent
 	   BufferedImage agentImage;

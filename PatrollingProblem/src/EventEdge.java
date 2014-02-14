@@ -1,22 +1,26 @@
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
 
 public class EventEdge extends Edge {
 	private Set<Event> events;
-	public boolean isBeingTraversed = false;
+	public Set<Agent> agents;
 
 	public EventEdge(String name, Vertex vertex1, Vertex vertex2) {
 		super(name, vertex1, vertex2);
 		this.name = name;
+		agents = new HashSet<Agent>();
 		events = new HashSet<Event>();
+	}
+	
+	public boolean isBeingTraversed() {
+		return agents.size() != 0;
 	}
 	
 	public void addEvent(Event event) {
 		events.add(event);
 	}
-	
+		
 	public Set<Event> collectEvents(double time) {
 		
 		// Set time collected for each event

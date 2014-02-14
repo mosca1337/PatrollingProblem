@@ -1,4 +1,7 @@
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
 import java.util.Timer;
@@ -11,14 +14,16 @@ public class Agent {
 	
 	// Agent Properties
 	public String name;
-	public Vertex lastLocation;
+	public Vertex lastVertex;
 	public EventEdge lastEdge = null;
 	public EventEdge currentEdge = null;
 	public Set<EventEdge> boundary;
-	public Fraction serviceRate;
+	private Fraction serviceRate;
+	private double serviceTime;
 	
 	// Movement logistics
 	private Stack<EventEdge> lastEdges;
+	public Queue<EventEdge> movementSequence;
 	
 	// Agent statistics
 	public int totalPriorityCollected;
@@ -27,7 +32,7 @@ public class Agent {
 	public int liveEventsCollected;
 	
 	// Animation properties
-	public Vertex movingToLocation;
+	public Vertex movingToVertex;
 	public double startTime;
 	public double endTime;
 	
@@ -38,13 +43,25 @@ public class Agent {
 	public Agent(String name, Simulation simulation, Vertex initialLocation, Set<EventEdge> boundary) {
 		this.name = name;
 		this.simulation = simulation;
-		this.lastLocation = initialLocation;
-		this.movingToLocation = initialLocation;
+		this.lastVertex = initialLocation;
+		this.movingToVertex = initialLocation;
 		this.boundary = boundary; // null boundary allows the agent to move anywhere
 		this.lastEdges = new Stack<EventEdge>();
 		
 		// Default service rate of 1
-		this.serviceRate = new Fraction(1, 1);
+		this.setServiceRate(new Fraction(1, 1));
+		this.movementSequence = new LinkedList<EventEdge>();
+	}
+	
+	public Fraction getServiceRate() {
+		return serviceRate;
+	}
+	
+	public void setServiceRate(Fraction aServiceRate) {
+		serviceRate = aServiceRate;
+		
+		// Find service time
+		serviceTime = serviceRate.evaluate() * Simulation.timeConstant;
 	}
     
 	public double getAverageDelay() {
@@ -61,7 +78,7 @@ public class Agent {
 		
 		// We are done traversing the edge
 		if (currentEdge != null) {
-			currentEdge.isBeingTraversed = false;
+			currentEdge.agents.remove(this);
 		}
 		
 		if (Simulation.verbose) {
@@ -69,62 +86,51 @@ public class Agent {
 		}
 
 		lastEdge = currentEdge;
-    	lastLocation = movingToLocation;
+    	lastVertex = movingToVertex;
     	lastEdges.add(lastEdge);
 
-		// Find next movement choices within the agent's boundary
-    	// Agent can move anywhere if there is no boundary
-		Set<EventEdge> adjacentEdges = simulation.graph.getAdjacentEdges(lastLocation);
-    	if (boundary != null) {
-    		adjacentEdges.retainAll(boundary);
+    	// If we are out of planned movements, find the next path
+    	if (movementSequence.size() == 0) {
+//    		Set<EventEdge> adjacentEdges = simulation.graph.getAdjacentEdges(lastVertex);
+//    		Set<EventEdge> adjacentEdgesCopy = new HashSet<EventEdge>(simulation.graph.getAdjacentEdges(lastVertex));
+//    		adjacentEdgesCopy.retainAll(boundary);
+//    		if (adjacentEdgesCopy.size() == 0) {
+//    			System.out.println("NO OPTIONS");
+//
+//    			System.out.println("boundary");
+//    			Set<Vertex> boundaryVertices = new HashSet<Vertex>();
+//    			for (EventEdge edge : boundary) {
+//    				boundaryVertices.add(edge.vertex1);
+//    				boundaryVertices.add(edge.vertex2);
+////    				System.out.println(edge);
+//    			}
+//    			
+//    			for (Vertex vertex : boundaryVertices) {
+//    				System.out.println(vertex);
+//    			}
+//    			
+//    			System.out.println("adjacents");
+//    			for (EventEdge edge : adjacentEdges) {
+//    				System.out.println(edge);
+//    			}
+//    			System.out.println("NO OPTIONS");
+//
+//    		}
+
+    		// Movement logic
+//    		basicFindMove(lastVertex);
+        	findMovesWithTwoStepLookAhead(lastVertex);
     	}
-    	
-    	// Do not traverse an edge with another agent
-		Set<EventEdge> traversedEdges = new HashSet<EventEdge>();
-		for (EventEdge edge : adjacentEdges) {
-			if (edge.isBeingTraversed) {
-				traversedEdges.add(edge);
-			}
-		}
-		adjacentEdges.removeAll(traversedEdges);
-		adjacentEdges.remove(lastEdge);
-		
-		// Looks for edge with highest priority
-		int highestPriority = -1;
-		for (EventEdge edge : adjacentEdges) {
-			int edgePriority = edge.getPriority(startTime);
-			if (edgePriority > highestPriority) {
-				highestPriority = edgePriority;
-				currentEdge = edge;
-			}
-		}
-		
-		// If all adjacent edges have no events, pick a new edge
-		if (highestPriority == 0) {
-			
-			// Avoid recently traversed edges
-			for (EventEdge edge : lastEdges) {
-				adjacentEdges.remove(edge);
-			}
 
-			// Pick a new edge
-			for (EventEdge edge : adjacentEdges) {
-				currentEdge = edge;
-				break;
-			}
-		} else {
-			// If the chosen edge has value, reset lastEdges
-			lastEdges.removeAllElements();
-		}
-		
+    	// Get the next movement
+    	currentEdge = movementSequence.poll();
+
 		// We are now traversing this edge
-		if (currentEdge != null) {
-			currentEdge.isBeingTraversed = true;
-		}
+		currentEdge.agents.add(this);
 
-		// Choose next location
-		Vertex nextLocation = currentEdge.getOtherVertex(lastLocation);
-		movingToLocation = nextLocation;
+		// Find the destination vertex
+		Vertex nextLocation = currentEdge.getOtherVertex(lastVertex);
+		movingToVertex = nextLocation;
 
 		int edgePriority = 0;
 		Set<Event> collectedEvents = currentEdge.collectEvents(startTime);
@@ -146,16 +152,142 @@ public class Agent {
 		
 		// Traversal time for the visualization
 		startTime = endTime;
-		double serviceTime = serviceRate.evaluate() * Simulation.timeConstant;
 		double traversalTime = edgePriority * serviceTime;
 		traversalTime = Math.max(serviceTime, traversalTime); // Idle time is equal to service time
 		endTime = startTime + Math.ceil(traversalTime);
 		
 		return endTime;
 	}
+	
+	private void basicFindMove(Vertex currentLocation) {
+
+    	EventEdge nextEdge = null;
+		Set<EventEdge> adjacentEdges = simulation.graph.getAdjacentEdges(currentLocation);
+
+		// Only travel within the agent's boundary
+    	if (boundary != null) {
+    		adjacentEdges.retainAll(boundary);
+    	}
+
+		// Looks for edge with highest priority
+		int highestPriority = -1;
+		for (EventEdge edge : adjacentEdges) {
+			int edgePriority = edge.getPriority(startTime);
+			if (edgePriority > highestPriority) {
+				highestPriority = edgePriority;
+				nextEdge = edge;
+			}
+		}
+		
+		// If all adjacent edges have no events, pick a new edge
+		if (highestPriority == 0) {
+			
+			// Avoid recently traversed edges
+			for (EventEdge edge : lastEdges) {
+				adjacentEdges.remove(edge);
+			}
+
+			// Pick a new edge
+			for (EventEdge edge : adjacentEdges) {
+				nextEdge = edge;
+				break;
+			}
+		} else {
+			// If the chosen edge has value, reset lastEdges
+			lastEdges.removeAllElements();
+		}
+		
+		movementSequence.add(nextEdge);
+	}
+	
+	private void findMovesWithTwoStepLookAhead(Vertex currentLocation) {
+
+		EventEdge bestFirstEdge = null;
+		EventEdge bestSecondEdge = null;
+		Set<EventEdge> adjacentEdges = simulation.graph.getAdjacentEdges(currentLocation);
+
+		// Only travel within the agent's boundary
+		if (boundary != null) {
+    		adjacentEdges.retainAll(boundary);
+    	}
+
+		// Looks for edge with highest priority
+		int highestPriority = -1;
+		for (EventEdge edge : adjacentEdges) {
+			int firstEdgePriority = edge.getPriority(startTime);
+			
+			double traversalTime = firstEdgePriority * serviceTime;
+			traversalTime = Math.max(serviceTime, traversalTime); // Idle time is equal to service time
+
+			// Get second step edges
+			Vertex firstVertex = edge.getOtherVertex(lastVertex);
+			Set<EventEdge> secondEdges = simulation.graph.getAdjacentEdges(firstVertex);
+			
+			// Do not consider the previous location
+			secondEdges.remove(edge);
+			
+			// Only travel within the agent's boundary
+			if (boundary != null) {
+        		secondEdges.retainAll(boundary);
+        	}
+			
+			// If there is more than one option, avoid edges that are being traversed
+			if (secondEdges.size() > 1) {
+				Set<EventEdge> nonTraversedEdges = new HashSet<EventEdge>();
+				for (EventEdge secondEdge : secondEdges) {
+					if (!secondEdge.isBeingTraversed()) {
+						nonTraversedEdges.add(secondEdge);
+					}
+				}
+				
+				// Make sure that there is at least one option
+				if (nonTraversedEdges.size() > 0) {
+					secondEdges = nonTraversedEdges;
+				} else {
+					System.out.println("Agent " + this + " has no other options!");
+				}
+			}
+
+			for (EventEdge secondEdge : secondEdges) {
+
+				int secondEdgePriority = secondEdge.getPriority(traversalTime + startTime);
+				int totalPriority = firstEdgePriority + secondEdgePriority;
+				if (totalPriority > highestPriority) {
+					highestPriority = firstEdgePriority;
+					
+					bestFirstEdge = edge;
+					bestSecondEdge = secondEdge;
+				}
+			}
+		}
+		
+		movementSequence.add(bestFirstEdge);
+		movementSequence.add(bestSecondEdge);
+	}
+	
+//	private int highestPathValue;
+//	private Queue<EventEdge> reversedMovements;
+//	private Queue<EventEdge> bestReversedMovements;
+//	
+//	private void findMovements(Vertex currentLocation, int movements) {
+//		
+//		highestPathValue = -1;
+//		reversedMovements = new LinkedList<EventEdge>();
+//		int pathValue = recursiveFindMovements(currentLocation, movements, 0);
+//		
+//		movementSequence.addAll(bestReversedMovements);
+//	}
+//	
+//	private int recursiveFindMovements(Vertex currentLocation, int movements, int pathValue) {
+//		
+//		
+//		recursiveFindMovements(currentLocation, movements--);
+//		
+//		return 0;
+//	}
 
 	@Override
 	public String toString() {
-		return name + " traversing (" + lastLocation.toString() + " to " + movingToLocation.toString() + ")";
+		return name + " traversing (" + lastVertex.toString() + " to " + movingToVertex.toString() + ")";
 	}
 }
