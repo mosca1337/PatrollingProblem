@@ -1,11 +1,8 @@
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
-import java.util.Timer;
-import java.util.TimerTask;
 
 
 public class Agent {
@@ -80,46 +77,18 @@ public class Agent {
 		if (currentEdge != null) {
 			currentEdge.agents.remove(this);
 		}
-		
-		if (Simulation.verbose) {
-	    	System.out.println(this);			
-		}
 
+		// Update locations
 		lastEdge = currentEdge;
     	lastVertex = movingToVertex;
-    	lastEdges.add(lastEdge);
 
     	// If we are out of planned movements, find the next path
     	if (movementSequence.size() == 0) {
-//    		Set<EventEdge> adjacentEdges = simulation.graph.getAdjacentEdges(lastVertex);
-//    		Set<EventEdge> adjacentEdgesCopy = new HashSet<EventEdge>(simulation.graph.getAdjacentEdges(lastVertex));
-//    		adjacentEdgesCopy.retainAll(boundary);
-//    		if (adjacentEdgesCopy.size() == 0) {
-//    			System.out.println("NO OPTIONS");
-//
-//    			System.out.println("boundary");
-//    			Set<Vertex> boundaryVertices = new HashSet<Vertex>();
-//    			for (EventEdge edge : boundary) {
-//    				boundaryVertices.add(edge.vertex1);
-//    				boundaryVertices.add(edge.vertex2);
-////    				System.out.println(edge);
-//    			}
-//    			
-//    			for (Vertex vertex : boundaryVertices) {
-//    				System.out.println(vertex);
-//    			}
-//    			
-//    			System.out.println("adjacents");
-//    			for (EventEdge edge : adjacentEdges) {
-//    				System.out.println(edge);
-//    			}
-//    			System.out.println("NO OPTIONS");
-//
-//    		}
 
     		// Movement logic
 //    		basicFindMove(lastVertex);
         	findMovesWithTwoStepLookAhead(lastVertex);
+//        	findMovements(lastVertex, 3);
     	}
 
     	// Get the next movement
@@ -132,13 +101,17 @@ public class Agent {
 		Vertex nextLocation = currentEdge.getOtherVertex(lastVertex);
 		movingToVertex = nextLocation;
 
-		int edgePriority = 0;
+		// Traversal time for the visualization
+		startTime = endTime;
+		double traversalTime = getTraversalTime(currentEdge, startTime);
+		endTime = startTime + traversalTime;
+
+		// Collect all events
 		Set<Event> collectedEvents = currentEdge.collectEvents(startTime);
 		for (Event event : collectedEvents) {
 			
 			// Collect the total priority and delay from each event on the edge
 			totalPriorityCollected += event.getPriority(startTime);
-			edgePriority += event.getPriority(startTime);
 			double delay = event.timeCollected - event.timeGenerated;
 			totalDelay += delay;
 			
@@ -149,12 +122,6 @@ public class Agent {
 				liveEventsCollected++;
 			}
 		}
-		
-		// Traversal time for the visualization
-		startTime = endTime;
-		double traversalTime = edgePriority * serviceTime;
-		traversalTime = Math.max(serviceTime, traversalTime); // Idle time is equal to service time
-		endTime = startTime + Math.ceil(traversalTime);
 		
 		return endTime;
 	}
@@ -197,6 +164,8 @@ public class Agent {
 			lastEdges.removeAllElements();
 		}
 		
+
+    	lastEdges.add(nextEdge);
 		movementSequence.add(nextEdge);
 	}
 	
@@ -215,9 +184,7 @@ public class Agent {
 		int highestPriority = -1;
 		for (EventEdge edge : adjacentEdges) {
 			int firstEdgePriority = edge.getPriority(startTime);
-			
-			double traversalTime = firstEdgePriority * serviceTime;
-			traversalTime = Math.max(serviceTime, traversalTime); // Idle time is equal to service time
+			double traversalTime = getTraversalTime(edge, startTime);
 
 			// Get second step edges
 			Vertex firstVertex = edge.getOtherVertex(lastVertex);
@@ -265,26 +232,67 @@ public class Agent {
 		movementSequence.add(bestSecondEdge);
 	}
 	
-//	private int highestPathValue;
-//	private Queue<EventEdge> reversedMovements;
-//	private Queue<EventEdge> bestReversedMovements;
-//	
-//	private void findMovements(Vertex currentLocation, int movements) {
-//		
-//		highestPathValue = -1;
-//		reversedMovements = new LinkedList<EventEdge>();
-//		int pathValue = recursiveFindMovements(currentLocation, movements, 0);
-//		
-//		movementSequence.addAll(bestReversedMovements);
-//	}
-//	
-//	private int recursiveFindMovements(Vertex currentLocation, int movements, int pathValue) {
-//		
-//		
-//		recursiveFindMovements(currentLocation, movements--);
-//		
-//		return 0;
-//	}
+	private Set<EventEdge> possibleMovements;
+	private Stack<EventEdge> reversedMovements;
+	
+	private void findMovements(Vertex currentLocation, int movements) {
+		
+		reversedMovements = new Stack<EventEdge>();
+		possibleMovements = new HashSet<EventEdge>();
+		int pathValue = recursiveFindMovements(currentLocation, movements, startTime, 0);
+		System.out.println("Best option has value of " + pathValue);
+		
+//		for (EventEdge edge : reversedMovements) {
+//			System.out.println(edge);
+//			movementSequence.add(edge);
+//		}
+		
+		movementSequence.addAll(reversedMovements);
+	}
+	
+	private int recursiveFindMovements(Vertex currentLocation, int movements, double time, int pathValue) {
+		
+		// Base case
+		if (movements == 0) {
+			return 0;
+		}
+		movements--;
+		
+		Set<EventEdge> adjacentEdges = simulation.graph.getAdjacentEdges(currentLocation);
+		
+		// Ignore all edges that we already considered
+		adjacentEdges.removeAll(possibleMovements);
+		
+		int highestPathValue = -1;
+		EventEdge bestMove = null;
+		
+		for (EventEdge edge : adjacentEdges) {
+			int edgePriority = edge.getPriority(time);
+			double traversalTime = getTraversalTime(edge, time);
+
+			possibleMovements.add(edge);
+			int nextPathValue = recursiveFindMovements(currentLocation, movements, (time + traversalTime), (pathValue + edgePriority));
+			possibleMovements.remove(edge);
+			
+			nextPathValue += edgePriority;
+			if (nextPathValue > highestPathValue) {
+				highestPathValue = nextPathValue;
+				bestMove = edge;
+			}
+		}
+		
+		reversedMovements.add(bestMove);
+		
+		return highestPathValue;
+	}
+	
+	private double getTraversalTime(EventEdge edge, double time) {
+		int edgePriority = edge.getPriority(time);
+		double traversalTime = edgePriority * serviceTime;
+		traversalTime = Math.max(serviceTime, traversalTime); // Idle time is equal to service time
+
+		return traversalTime;
+	}
 
 	@Override
 	public String toString() {

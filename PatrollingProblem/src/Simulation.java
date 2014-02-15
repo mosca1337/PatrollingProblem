@@ -92,7 +92,7 @@ public class Simulation {
 		simulation.totalAgents = 4;
 		
 		simulation.totalEvents = 100000;
-//		simulation.serviceRate = new Fraction(1,10);
+		simulation.serviceRate = new Fraction(1,10);
 		simulation.simulate();
 		
 		simulation.getAverageDelay();
