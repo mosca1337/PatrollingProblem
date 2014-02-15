@@ -21,16 +21,16 @@ import au.com.bytecode.opencsv.CSVWriter;
  * There are multiple parameters involved in each Simulation. A simulation is based off of an abstract sense
  * of time that we call a 'tick'. 
  * 
- * Events can be generated at a constant rate or an exponential rate. 
+ * Events are generated at a constant rate or an exponential rate. 
  * Constant event generation ranges from 1 to 5.5 events generated per 'tick' while exponential event 
- * generation ranges from a mean of 1 to 5.5. When an event is generated, the value of that event is
- * a random number from 1 to 10.
+ * generation is based off of an exponential distribution with mean ranging from 1 to 5.5. 
+ * When an event is generated, the value of that event is a random number from 1 to 10.
  * 
  * The value or priority of an event can either remove constant or it can decrease. When the event
  * value is constant, its value never changes. When an event's value is set to decrease, the event's
- * priority value decreases by 1 every two ticks.
+ * priority value decreases by 1 value every two ticks.
  * 
- * For each simulation, the agent's will share a service rate. The service rate is the speed at
+ * For each simulation, all agents will share a service rate. The service rate is the speed at
  * which an agent traverses an edge. The traversal speed is directly proportional to the value
  * of an edge. For our simulations, the service rates vary from f/10, f/20, and f/50. 
  * For example, if the service rate is f/10, and the edge has a value of 15, then the agent
@@ -39,12 +39,11 @@ import au.com.bytecode.opencsv.CSVWriter;
  * When an edge has no value, an agent is said to 'idle' across the edge. Idle time is equal
  * to the traversal time of an edge with a value of 1.
  * 
- * In these simulations, the number of agents vary from 1 to 4.
+ * The number of agents vary from 1 to 4.
  * 
  * A simulation will end after 100,000 events have been generated.
  * 
  * For each combination of simulation parameters, 10 samples are taken and averaged.
- * 
  * 
  * @author mosca1337
  *
