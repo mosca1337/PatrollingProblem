@@ -86,8 +86,8 @@ public class Agent {
     	if (movementSequence.size() == 0) {
 
     		// Movement logic
-//    		basicFindMove(lastVertex);
-        	findMovesWithTwoStepLookAhead(lastVertex);
+    		basicFindMove(lastVertex);
+//        	findMovesWithTwoStepLookAhead(lastVertex);
 //        	findMovements(lastVertex, 3);
     	}
 

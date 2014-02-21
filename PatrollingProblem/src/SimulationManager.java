@@ -51,7 +51,7 @@ import au.com.bytecode.opencsv.CSVWriter;
 public class SimulationManager {
 	public final static int trials = 10;
 	public final static int totalAgents = 4;
-	public final static int[] serviceRateConstants = {10,20,50};
+	public final static int[] serviceRateConstants = {2,4,8};
 	
 	
 	// TODO: even
@@ -100,7 +100,6 @@ public class SimulationManager {
 	};
 	
 	public static Function[] valueFunctions = {constantValue, decreasingValue}; 
-	// TODO: show decreasing function instead of 'Decreasing' f = f0 - 0.5t
 	public static String[] valueFunctionStrings = {"Constant", "Decreasing"};
 	
 	public static Function[] periodFunctions = {evenEventPeriod, exponentialEventPeriod};
@@ -135,10 +134,8 @@ public class SimulationManager {
 			
 			String periodFunctionString = "";
 			if (periodFunction == evenEventPeriod) {
-//				periodFunctionString = "f=" + new Double(constantEventPeriod.function(1) * Simulation.timeConstant).toString() + "t";
 				periodFunctionString = "Even";
 			} else if (periodFunction == exponentialEventPeriod) {
-//				periodFunctionString = new Double(constantEventPeriod.function(1) * Simulation.timeConstant).toString();
 				periodFunctionString = "Exponential";
 			}
 			
@@ -155,6 +152,7 @@ public class SimulationManager {
 					// Visual graph data set
 					XYSeriesCollection eventsCollectedCollection = new XYSeriesCollection();
 					XYSeriesCollection deadEventsCollection = new XYSeriesCollection();
+					XYSeriesCollection valueCollectedCollection = new XYSeriesCollection();
 					XYSeriesCollection averageDelayCollection = new XYSeriesCollection();
 					XYSeriesCollection handledRateCollection = new XYSeriesCollection();
 
@@ -175,6 +173,7 @@ public class SimulationManager {
 						// Data series for graphing
 						XYSeries eventsCollectedSeries = new XYSeries(serviceRateString);
 						XYSeries deadEventsSeries = new XYSeries(serviceRateString);
+						XYSeries valueCollectedSeries = new XYSeries(serviceRateString);
 						XYSeries averageDelaySeries = new XYSeries(serviceRateString);
 						XYSeries handledRateSeries = new XYSeries(serviceRateString);
 
@@ -234,6 +233,7 @@ public class SimulationManager {
 							// Add data to series
 							eventsCollectedSeries.add(mean, avgLiveEventsCollected);
 							deadEventsSeries.add(mean, avgDeadEvents);
+							valueCollectedSeries.add(mean, avgWeightCollected);
 							averageDelaySeries.add(mean, avgDelay);
 							handledRateSeries.add(mean, avgHandledRate);
 
@@ -248,6 +248,7 @@ public class SimulationManager {
 						
 						eventsCollectedCollection.addSeries(eventsCollectedSeries);
 						deadEventsCollection.addSeries(deadEventsSeries);
+						valueCollectedCollection.addSeries(valueCollectedSeries);
 						averageDelayCollection.addSeries(averageDelaySeries);
 						handledRateCollection.addSeries(handledRateSeries);
 						
@@ -259,6 +260,7 @@ public class SimulationManager {
 
 					LineChart eventsCollectedChart = new LineChart("Mean", "Events Collected", eventsCollectedCollection);
 					LineChart deadEventsChart = new LineChart("Mean", "Dead Events", deadEventsCollection);
+					LineChart valueCollectedChart = new LineChart("Mean", "Total Value", valueCollectedCollection);
 					LineChart averageDelayChart = new LineChart("Mean", "Average Delay", averageDelayCollection);
 					LineChart handledRateChart = new LineChart("Mean", "Handled Rate", handledRateCollection);
 					
@@ -274,11 +276,13 @@ public class SimulationManager {
 					
 					File eventsCollectedFile = new File(simulationFolder, "eventsCollected.png");
 					File deadEventsFile = new File(simulationFolder, "deadEvents.png");
+					File valueCollectedFile = new File(simulationFolder, "valueCollected.png");
 					File averageDelayFile = new File(simulationFolder, "averageDelay.png");
 					File handledRateFile = new File(simulationFolder, "handledRate.png");
 					
 					eventsCollectedChart.saveChartAsPNG(eventsCollectedFile);
 					deadEventsChart.saveChartAsPNG(deadEventsFile);
+					valueCollectedChart.saveChartAsPNG(valueCollectedFile);
 					averageDelayChart.saveChartAsPNG(averageDelayFile);
 					handledRateChart.saveChartAsPNG(handledRateFile);
 				}
